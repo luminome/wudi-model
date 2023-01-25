@@ -8,7 +8,7 @@ export const colors = {
 
     info_bk_opacity: 0.85,
     window: '#1D2733FF',
-    window_overlay: '#1D2733CC',
+    window_overlay: '#1D273333',
 
     contours: {
         select: [0x4444CC, 0x4444CC]
@@ -23,10 +23,4 @@ export const colors = {
         select: [0x333366, 0x4444FF]
     }
 
-}
-
-export const vars = {
-    suspend_interaction: false,
-    started_interaction: false,
-    instructions_active: false,
 }

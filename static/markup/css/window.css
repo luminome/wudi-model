@@ -95,7 +95,7 @@ a.darklink:visited{
 	position: absolute;
 	top:0;
 	left:0;
-	background-color: #0f1621FF;
+	background-color: #0f162199;
 	width: 100vw;
 	height: inherit;
 	box-sizing: border-box;
@@ -530,6 +530,7 @@ a.darklink:visited{
 	margin-left:4px;
 	margin-right:4px;
 	display:block;
+	white-space: pre-line;
 	/*z-index: 2;*/
 }
 

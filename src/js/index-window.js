@@ -1,21 +1,17 @@
 import * as util from './util';
 import * as config from '../window-config';
 
-const display_inline_array = ['none', 'inline-block'];
 const display_array = ['none', 'block'];
-const wudi_type_array = [{item:'upwelling',label:'up'}, {item:'downwelling',label:'down'}];
 
 const page_handle = document.getElementById("page-handle-icon");
 const model_controls = document.getElementById('model-controls');
-const model_dom = document.getElementById('model');
 const bounds = document.getElementById('bounds');
 const bounds_overlay = document.getElementById('bounds-overlay');
 const intro_box = document.getElementById('intro-box');
 const instructions_slide = document.getElementById('intro-instructions');
 const intro_slide = document.getElementById('intro');
 
-
-
+//#// object to handle html page-context functions.
 const page = {
     instructions_active: false,
     interaction_state: false,
@@ -176,35 +172,10 @@ const page = {
             page.interaction_pause(false);
             page.started_interaction = true;
         }
-
-        //
-        // switch (from_control.param) {
-        //     case 'intro':
-        //
-        //         intro_slide.style.display = 'none';
-        //         instructions_slide.style.display = 'block';
-        //         model_controls.classList.remove('hidden');
-        //
-        //         break
-        //     case 'instructions' || 'instructions-control':
-        //
-        //         instructions_slide.style.display = 'none';
-        //
-        //         const instructions_control = document.getElementById('instructions');
-        //         instructions_control.classList.remove('active');
-        //
-        //         //const instructions_button = document.getElementById('instructions-button');
-        //         page.instructions_button.style.display = 'none';
-        //
-        //         page.interaction_pause(false);
-        //         page.started_interaction = true;
-        //
-        //         break
-        //     default:
-        //         const has_control = evt.target.closest('.control-button');
-        //         console.log();
-        //         alert(evt.target.param);
-        // }
+    },
+    scroll_to_downloads(){
+        const box = document.getElementById('output').getBoundingClientRect();
+        window.scrollTo({ top: box.top, behavior: 'smooth' });
     }
 }
 

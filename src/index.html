@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<title>wudi-model</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, viewport-fit=cover, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="dark-content">
+	<link type="text/css" rel="stylesheet" href="/static/markup/css/basic.css">
+	<link type="text/css" rel="stylesheet" href="/static/markup/css/window.css">
+</head>
+<body>
+
+
+<!--<script type="module" src="./js/obspkg-lite.js"></script>-->
+<script type="module" src="js/index-window.js"></script>
+
+<div id="menu-div" class="is-overlay"></div>
+
+<div id="bounds">
+	<a id="top"></a>
+
+
+	<div id="model">
+
+		<div id="wudi-selection-temp" class="wudi-selection hidden">
+			<div class="marker"></div>
+			<div class="label"></div>
+		</div>
+
+		<div id="y-axis" class="model-plot-major-axis" style="border-left:1px green solid;"></div>
+		<div id="x-axis" class="model-plot-major-axis" style="border-top:1px green solid;"></div>
+		<div id="model-plot-ticks"></div>
+
+	</div>
+
+
+
+	<div id="title-bar" class="bar hidden">
+		<div class="box-wrapper">
+			<div id="upwelling" class="button" data-layer="up"><div>upwelling</div></div>
+			<div id="downwelling" class="button" data-layer="down"><div>downwelling</div></div>
+			&nbsp;days&nbsp;
+			<div id="title" class="entry_page_title">1979 to 2020</div>
+		</div>
+	</div>
+
+	<div id="times-bar" class="bar hidden">
+		<div id="time_element_temp" class="time-element column-label"></div>
+		<div id="years_container" class="row time-container"></div>
+		<div id="months_container" class="row time-container"></div>
+	</div>
+
+	<div id="graph-obj-bar" class="bar hidden">
+		<canvas id="graph" width="0" height="0"></canvas>
+		<div id="graph-mark"></div>
+		<div id="graph-mark-value"></div>
+		<div id="graph-controls" class="is-overlay">
+			<div id="graph-close" title="close graph" class="control-button"></div>
+			<div id="graph-download" title="download selection data" class="control-button"></div>
+		</div>
+		<div id="graph-title" title="graph title">hello</div>
+	</div>
+
+	<div id="q-nav-bar" class="bar hidden">
+		<div class="area-strip"></div>
+		<div class="label">
+			shocking.
+		</div>
+		<div class="base-position"></div>
+	</div>
+
+	<div id="obs" class="hidden">hello</div>
+
+	<div id="info-field" class="info-style hidden">
+		<div class="info-temp info-section">
+			<div class="info-head"></div>
+			<div class="info-text"></div>
+		</div>
+		<div class="marker"></div>
+		<div class="info-body"></div>
+	</div>
+
+	<div id="bounds-overlay"></div>
+
+	<!-- recenter,camera-motion,instructions,navigation,mpa_s -->
+	<div id="model-controls" class="is-overlay hidden">
+		<div id="recenter" title="recenter map on screen (space)" class="control-button">
+			<svg width="256px" height="256px" viewBox="0 0 256 256" >
+				<path class="st0" d="M196.6,10H59.5C32.2,10,10,32.2,10,59.5v137c0,27.3,22.2,49.5,49.5,49.5h137c27.3,0,49.5-22.2,49.6-49.4V59.5
+C246.1,32.2,223.9,10,196.6,10z M223.1,196.6c0,14.6-11.9,26.5-26.5,26.5H59.5c-14.6,0-26.5-11.9-26.5-26.5V59.5
+C33,44.8,44.8,33,59.5,33h137.1c14.6,0,26.5,11.9,26.5,26.5V196.6z M62.6,133.4c-5-1.1-10,2-11,7.1c-1.1,5,2,10,7.1,11l19.9,4.4
+c3,0.7,4.1,4.3,1.9,6.5L52,190.9c-3.7,3.7-3.7,9.6,0,13.3s9.6,3.7,13.3,0l28.6-28.6c2.2-2.2,5.8-1.1,6.5,1.9l4.4,19.9
+c1.1,5,6,8,11,7.1c5-1.1,8-6,7.1-11l-10.3-47c-0.3-1.5-1.5-2.6-2.9-2.9L62.6,133.4z M190.8,51.8l-28.6,28.6
+c-2.2,2.2-5.8,1.1-6.5-1.9l-4.4-19.9c-1.1-5-6-8-11-7.1c-5,1.1-8,6-7.1,11l10.3,47c0.3,1.5,1.5,2.6,2.9,2.9l47,10.3
+c5,1.1,10-2,11-7.1c1.1-5-2-10-7.1-11l-19.9-4.4c-3-0.7-4.1-4.3-1.9-6.5l28.6-28.6c3.7-3.7,3.7-9.6,0-13.3
+C200.4,48.1,194.5,48.1,190.8,51.8z M133.4,193.5c-1.1,5,2,10,7.1,11c5,1.1,10-2,11-7.1l4.4-19.9c0.7-3,4.3-4.1,6.5-1.9L191,204
+c3.7,3.7,9.6,3.7,13.3,0s3.7-9.6,0-13.3l-28.6-28.6c-2.2-2.2-1.1-5.8,1.9-6.5l19.9-4.4c5-1.1,8-6,7.1-11c-1.1-5-6-8-11-7.1l-47,10.3
+c-1.5,0.3-2.6,1.5-2.9,2.9L133.4,193.5z M51.8,65.2l28.6,28.6c2.2,2.2,1.1,5.8-1.9,6.5l-19.9,4.4c-5,1.1-8,6-7.1,11
+c1.1,5,6,8,11,7.1l47-10.3c1.5-0.3,2.6-1.5,2.9-2.9l10.3-47c1.1-5-2-10-7.1-11c-5-1.1-10,2-11,7.1l-4.4,19.9c-0.7,3-4.3,4.1-6.5,1.9
+L65.1,52c-3.7-3.7-9.6-3.7-13.3,0C48.2,55.6,48.2,61.6,51.8,65.2z"/>
+			</svg>
+		</div>
+		<div id="camera-motion" title="auto-rotate view" class="control-button">
+			<svg width="256px" height="256px" viewBox="0 0 256 256" >
+				<path class="st0" d="M196.6,10H59.5C32.2,10,10,32.2,10,59.5v137c0,27.3,22.2,49.5,49.5,49.5h137c27.3,0,49.5-22.2,49.6-49.4V59.5
+C246.1,32.2,223.9,10,196.6,10z M223.1,196.6c0,14.6-11.9,26.5-26.5,26.5H59.5c-14.6,0-26.5-11.9-26.5-26.5V59.5
+C33,44.8,44.8,33,59.5,33h137.1c14.6,0,26.5,11.9,26.5,26.5V196.6z M87.9,94c-2.2-3.5-6.8-4.5-10.3-2.2c-3.5,2.2-4.5,6.8-2.2,10.3
+l8.8,13.7c1.3,2.1-0.2,4.8-2.6,4.8H49.4c-4.1,0-7.5,3.4-7.5,7.5c0,4.1,3.4,7.5,7.5,7.5h32.3c2.4,0,3.9,2.7,2.6,4.8l-8.8,13.7
+c-2.2,3.5-1.2,7.9,2.2,10.3c3.5,2.2,7.9,1.2,10.3-2.2l20.8-32.4c0.6-1,0.6-2.3,0-3.3L87.9,94z M206.7,120.4h-32.3
+c-2.4,0-3.9-2.7-2.6-4.8l8.8-13.7c2.2-3.5,1.2-7.9-2.2-10.3c-3.5-2.2-7.9-1.2-10.3,2.2l-20.8,32.4c-0.6,1-0.6,2.3,0,3.3l20.8,32.4
+c2.2,3.5,6.8,4.5,10.3,2.2c3.5-2.2,4.5-6.8,2.2-10.3l-8.8-13.7c-1.3-2.1,0.2-4.8,2.6-4.8h32.3c4.1,0,7.5-3.4,7.5-7.5
+S210.9,120.4,206.7,120.4z M126.2,116.1c6.5-1.1,12.7,3.4,13.8,9.9c1.1,6.5-3.4,12.7-9.9,13.8c-6.5,1.1-12.7-3.4-13.8-9.9
+C115.2,123.4,119.6,117.2,126.2,116.1z"/>
+			</svg>
+		</div>
+		<div id="instructions" title="show instructions" class="control-button active">
+			<svg width="256px" height="256px" viewBox="0 0 256 256" >
+				<path class="st0" d="M196.6,10H59.5C32.2,10,10,32.2,10,59.5v137c0,27.3,22.2,49.5,49.5,49.5h137c27.3,0,49.5-22.2,49.6-49.4V59.5
+C246.1,32.2,223.9,10,196.6,10z M223.1,196.6c0,14.6-11.9,26.5-26.5,26.5H59.5c-14.6,0-26.5-11.9-26.5-26.5V59.5
+C33,44.8,44.8,33,59.5,33h137.1c14.6,0,26.5,11.9,26.5,26.5V196.6z M162.3,189.3l-2.3,9.4c-6.9,2.7-12.4,4.8-16.5,6.2
+c-4.1,1.4-8.9,2.1-14.4,2.1c-8.4,0-14.9-2-19.5-6.1c-4.6-4.1-7-9.3-7-15.6c0-2.4,0.2-4.9,0.5-7.5c0.3-2.5,0.9-5.4,1.7-8.6l8.6-30.6
+c0.8-2.9,1.4-5.7,1.9-8.3c0.5-2.6,0.8-5,0.8-7.2c0-3.9-0.8-6.6-2.4-8.2c-1.6-1.5-4.7-2.3-9.2-2.3c-2.2,0-4.5,0.4-6.9,1
+c-2.3,0.7-4.4,1.4-6,2l2.3-9.4c5.7-2.3,11.1-4.3,16.3-5.9c5.2-1.6,10.1-2.5,14.7-2.5c8.3,0,14.7,2,19.2,6c4.5,4,6.8,9.2,6.8,15.7
+c0,1.3-0.2,3.7-0.5,7c-0.3,3.4-0.9,6.4-1.7,9.2l-8.6,30.5c-0.7,2.4-1.3,5.2-1.9,8.4c-0.6,3.1-0.8,5.5-0.8,7.1c0,4.1,0.9,6.8,2.7,8.3
+c1.8,1.5,5,2.2,9.4,2.2c2.1,0,4.5-0.4,7.1-1.1C159.1,190.5,161.1,189.8,162.3,189.3z M164.5,68.2c0,5.3-2,9.8-6,13.6
+c-4,3.7-8.9,5.6-14.5,5.6s-10.5-1.9-14.6-5.6c-4.1-3.7-6.1-8.3-6.1-13.6c0-5.3,2-9.8,6.1-13.6c4-3.8,8.9-5.7,14.6-5.7
+s10.5,1.9,14.5,5.7C162.4,58.3,164.5,62.9,164.5,68.2z"/>
+			</svg></div>
+		<div id="navigation" title="show/hide navigation" class="control-button">
+			<svg width="256px" height="256px" viewBox="0 0 256 256" >
+				<path class="st0" d="M196.6,10H59.5C32.2,10,10,32.2,10,59.5v137c0,27.3,22.2,49.5,49.5,49.5h137c27.3,0,49.5-22.2,49.6-49.4V59.5
+C246.1,32.2,223.9,10,196.6,10z M223.1,196.6c0,14.6-11.9,26.5-26.5,26.5H59.5c-14.6,0-26.5-11.9-26.5-26.5V59.5
+C33,44.8,44.8,33,59.5,33h137.1c14.6,0,26.5,11.9,26.5,26.5V196.6z M56,173.8V82.2h12.6l19.8,55.2h0.3V82.2h13.1v91.7H89.5
+l-20.1-55.1h-0.3v55.1L56,173.8L56,173.8z M107.8,173.8l20.5-91.7h10.9l20.5,91.7h-13.1l-3.9-19.7h-17.9l-3.9,19.7H107.8z
+ M140.2,141.8l-6.4-33.2h-0.3l-6.4,33.2H140.2z M205.9,82.2l-18.8,91.7h-11.6l-18.7-91.7h13.9l10.4,64h0.3l10.6-64H205.9z"/>
+			</svg></div>
+		<div id="mpa_s" title="show/hide marine protected regions (mpas)" class="control-button control-toggle">
+			<svg width="256px" height="256px" viewBox="0 0 256 256" >
+<path class="st0" d="M196.6,10H59.5C32.2,10,10,32.2,10,59.5v137c0,27.3,22.2,49.5,49.5,49.5h137c27.3,0,49.5-22.2,49.6-49.4V59.5
+C246.1,32.2,223.9,10,196.6,10z M223.1,196.6c0,14.6-11.9,26.5-26.5,26.5H59.5c-14.6,0-26.5-11.9-26.5-26.5V59.5
+C33,44.8,44.8,33,59.5,33h137.1c14.6,0,26.5,11.9,26.5,26.5V196.6z M118.6,57.5l-49.1,24L58,166l92,32.6l54.8-68.5l-32.6-23.4
+l-25.2,18.3l-23.4-17.1l13.1-47.4L118.6,57.5z"/>
+			</svg></div>
+	</div>
+
+
+
+</div><!-- bounds -->
+
+<div id="intro-box" class="intro-box">
+	<div class="intro-wrapper">
+		<div id="intro">
+			<div class="box-wrapper is-overlay">
+				<div class="entry_page_intro wrapper-text">
+					Browse the 3D map and explore 42 years of wind-driven sporadic upwelling and downwelling events around Mediterranean shorelines. Discover where do they occur preferentially, explore their annual and seasonal distribution and access to Wind-based Upwelling and Downwelling Index (WUDI) values for any event. Scroll down to learn more.
+				</div>
+				<div id="intro-button">NEXT</div>
+			</div>
+		</div>
+		<div id="intro-instructions" style="display:none;">
+			<div class="box-wrapper is-overlay">
+				<div id="instructions-slide" class="instructions-slide wrapper-text">
+
+					<div class="instructions-text">INSTRUCTIONS:</div>
+
+					<div class="instructions-header"><h2>PAN</h2></div>
+					<div class="instructions-text">Click/Tap and drag the map to pan.
+						Click/Tap anywhere on map to center to that position.
+					</div>
+					<div class="instructions-header"><h2>ZOOM</h2></div>
+					<div class="instructions-text">Use mouse scroll-wheel.
+						Trackpad/mobile: use two fingers and pinch.
+					</div>
+					<div class="instructions-header"><h2>3d ROTATE</h2></div>
+					<div class="instructions-text">Right-Click+drag or Shift+Click+drag.
+						Trackpad/mobile: use two fingers and rotate/slide.
+					</div>
+					<div class="instructions-header"><h2>SELECT</h2></div>
+					<div class="instructions-text">Click a point on the coastline to see a graph of its data.
+						Click years/months to view data for selected time range.
+						Trackpad/mobile: tap-and-hold for info, tap again to select.
+						You can select multiple points and multiple times. The graph will show averaged data.
+					</div>
+					<div class="instructions-simple icon-recenter">Recenter the map (space-bar)</div>
+					<div class="instructions-simple icon-camera-motion">Rotate the view when selecting a point</div>
+					<div class="instructions-simple icon-instructions">Show/Hide these instructions</div>
+					<div class="instructions-simple icon-navigation">Show/Hide secondary navigation bar</div>
+					<div class="instructions-simple icon-mpa_s">Show/Hide marine protected areas</div>
+					<hr/>
+					<div class="legend-items">
+						<div class="instructions-text">MAP LEGEND:</div>
+						<!--place:basic-hexagon,mpa-designated:mpa-shape,mpa-proposed:mpa-shape,isobath:isobath-shape-->
+						<div>
+							<div id="places"></div>
+							<div>City or Town</div>
+						</div>
+						<div>
+							<div id="mpa_s_designated"></div>
+							<div>Designated Marine Protected Area</div>
+						</div>
+						<div>
+							<div id="mpa_s_proposed"></div>
+							<div>Proposed Marine Protected Area</div>
+						</div>
+						<div>
+							<div id="isobath"></div>
+							<div>100m isobath</div>
+						</div>
+					</div>
+				</div>
+				<div id="instructions-button">OK</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+<div id="page-handle-icon"></div>
+<!--<div id="dmark-seven" class="dmark">0.0</div>-->
+<!--<div id="dmark-eight" class="dmark">0.0</div>-->
+
+<div class="page-text">
+
+
+
+
+	<div class="section essential">
+		<h1>Intense wind events force horizontal and vertical water movements near the coast</h1>
+		<p>Intermittent wind-driven coastal upwelling and downwelling are ubiquitous processes that drive a large part of the high frequency variability of coastal hydrography, with potential implications for ecosystems and socio-economic activities.</p>
+
+		<p>The upwelling of deep, cold and nutrient rich waters to the surface (resp. the downwelling of surface waters to the seabed) are found to occur sporadically along specific Mediterranean coastlines and last for days to weeks.</p>
+
+		<p>Analyzing a long-term archive of Sea Surface Winds from ERA5 reanalysis together with high-resolution bathymetry from EMODnet, we calculate a Wind-based Upwelling and Downwelling Index (WUDI, Odic et al. 2022) at daily resolution along Mediterranean shorelines.</p>
+
+		<p>A climatological database of wind-driven events was constructed for the 1979-2020 period, allowing the calculation of robust statistics on their annual and seasonal occurrence along the various shoreline portions. Here you can explore 42 years of statistics and access to WUDI intensity (cross-shore Ekman transport) for any event.</p>
+
+		<div id="illustrations" class="img-grid">
+			<div class="img-col"><div class="label">upwelling illustration (svg)</div><img src="../static/img/tidal-post-v2-01.svg" alt=""/></div>
+			<div class="img-col"><div class="label">downwelling illustration (svg)</div><img src="../static/img/tidal-post-v2-02.svg" alt=""/></div>
+		</div>
+
+	</div>
+
+	<div class="section">
+		<h1>Credits and Support</h1>
+		<p>These results are parts of the action “Developing Downstream applications and services on BIO-PHYsical characterization of the seascape for COASTal management” (BIOPHYCOAST) funded by the European Commission through the program “Caroline Herschel” for Copernicus user uptake.</p>
+		<div id="logo-cluster" class="logos-grid">
+			<div class="logos-col"><a class="logo" href="https://ec.europa.eu/info/index_en" target="new"><img src="../static/img/European_Commission.svg.png"/></a></div>
+			<div class="logos-col"><a class="logo" href="https://www.copernicus.eu/en" target="new"><img src="../static/img/logo_Copernicus.jpg"/></a></div>
+			<div class="logos-col"><a class="logo" href="https://www.mio.osupytheas.fr/en" target="new"><img src="../static/img/logo_mio.png"/></a></div>
+			<div class="logos-col"><a class="logo" href="https://www.cnrs.fr/en" target="new"><img src="../static/img/logo_cnrs.png"/></a></div>
+		</div>
+
+
+	</div>
+
+	<div class="section">
+
+		<h1>WUDI calculations are based on:</h1>
+		<p>• Hourly wind data at 10m height and 20 km spatial resolution from the ERA5 reanalysis available from the Copernicus Climate Data Store.</p>
+		<p>• EMODnet bathymetry at high resolution (115 m) available here considering the 20 m isobath obtained by interpolation of the original data.</p>
+		<p>• Marine Protected Areas information were obtained from the MAPAMED data base 2021 <a href="https://www.mapamed.org/">(https://www.mapamed.org/)</a></p>
+		<p>• Population centers geolocation data from OpenStreetMap.org <a href="https://openstreetmap.org/copyright">(https://openstreetmap.org/copyright)</a></p>
+		<p>• Population centers supplemental data from Wikidata.org <a href="https://www.wikidata.org/wiki/Wikidata:Main_Page">(https://www.wikidata.org)</a></p>
+
+		<p>For more information review: Odic M, Bensoussan N., Pinazo C., Taupier-Letage I., Rossi V. (2022). Sporadic Wind-Driven Upwelling/Downwelling and Associated Cooling/Warming along the North-West Mediterranean Coastlines. Continental Shelf Research. In press.</p>
+
+	</div>
+
+	<div class="section">
+		<p>All information is provided as is. The data producer and owner are not are not responsible for improper use.</p>
+		<p>For more information or any specific request concerning the WUDI data base, please contact:</p>
+		<a href="mailto:rossi@mio.osupytheas.fr">Dr. Vincent Rossi (rossi@mio.osupytheas.fr)</a> and/or
+		<a href="mailto:nbensoussan@gmail.com">Dr. Nathaniel Bensoussan (nbensoussan@gmail.com)</a>
+	</div>
+	<div id="output" class="section">
+		<h1>Download Data</h1>
+		<div id="output-text">No points selected.</div>
+		<a href="#top">back to top of page</a>
+	</div>
+	<div id="credit">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="1024px" height="1024px" viewBox="0 0 1024 1024" xml:space="preserve">
+<style type="text/css">
+	.st-cred{fill:#FFFFFF;}
+</style>
+<path class="st-cred" d="M280.8,403.8c-30.9,0-55.2,5.9-72.4,17.4c-17.4,11.7-26.6,29.2-26.6,50.6c0,16.7,6,30.7,17.9,41.8c0,0,0,0,0,0
+	c17.6,16,35.4,17.5,82.9,21.5c17.2,1.5,30.3,2.9,38,5.4c8.1,2.5,8.1,5.3,8.1,7.2c0,13.6-22.9,18.4-42.5,18.4
+	c-23.8,0-42-4.6-55.9-14.2c0,0,0,0,0,0c-5.1-3.4-6.7-5.3-8.6-7.5l0,0l-6.1-7.2c-0.8-0.9-1.9-1.4-3.1-1.4c-0.5,0-1,0.1-1.5,0.3
+	l-46.4,19.2c-1.1,0.5-2,1.4-2.3,2.6c-0.3,1.2-0.1,2.4,0.5,3.4l9.1,13.2c0,0,0,0,0,0c5.8,8.4,21.3,30.7,63.2,41.2
+	c13.2,3.4,33,5.7,49.3,5.7c43.8,0,74.3-11.8,90.6-34.9c8-11.3,12-24.4,12-39c0-15.3-4.9-29.1-14.1-39.7
+	c-9.3-10.7-22.4-18.2-39.1-22.1c-9-2.1-17.9-3.2-24.6-3.8c-7-0.8-14.4-1.5-24-2.2l-0.6-0.1c-7.4-0.7-15.1-1.3-22.7-2.1
+	c-10.4-1.1-18.5-2.2-20.7-4.7c0,0-0.1-0.1-0.1-0.1c-0.4-0.5-0.7-1.1-0.7-1.8c0-0.9,0-3.8,6.2-6.8c6.5-3.3,20.4-5.4,34.6-5.4
+	c18.9,0,33.3,3.8,44.2,11.5c2.3,1.7,3.6,3,6.3,5.7c0.8,0.8,1.8,1.2,2.9,1.2c0.4,0,0.8-0.1,1.2-0.2l49.5-16.2
+	c1.2-0.4,2.1-1.3,2.5-2.5c0.4-1.2,0.2-2.5-0.5-3.6l-5.6-8.1c0,0,0,0,0-0.1c-6.2-8.7-11.5-14.7-21.9-21.8
+	C339.4,410.5,313.5,403.8,280.8,403.8L280.8,403.8z M528.1,408H486c-1.5,0-2.9,0.8-3.6,2.2L378.7,611.3c-0.6,1.2-0.6,2.7,0.1,3.9
+	c0.7,1.2,2,1.9,3.4,1.9h57.1c1.5,0,2.9-0.9,3.6-2.2l20.2-40.9h86.4l20.2,40.9c0.7,1.4,2.1,2.2,3.6,2.2h57.8c1.4,0,2.7-0.7,3.4-1.9
+	c0.7-1.2,0.8-2.7,0.1-3.9l-103-201.1C531,408.9,529.6,408,528.1,408L528.1,408z M490.6,519.8l15.8-30.9l15.5,30.9H490.6L490.6,519.8
+	z M512,68.4c-244.7,0-443.8,199.1-443.8,443.8C68.2,756.9,267.3,956,512,956c140.3,0,269.4-64.2,354.1-176.3c0.6-0.8,0.9-1.9,0.8-3
+	c-0.1-1.1-0.7-2-1.5-2.6l-36.6-27.7c-0.7-0.5-1.6-0.8-2.4-0.8c-1.2,0-2.4,0.5-3.2,1.6C748.7,845.7,635.3,902.1,512,902.1
+	c-215,0-389.9-174.9-389.9-389.9c0-215,174.9-389.9,389.9-389.9c215,0,389.9,174.9,389.9,389.9c0,16.9-1.1,33.9-3.3,50.7
+	c-7,59.5-33.8,82.3-56.6,83.7c-1.9,0.1-3.7,0.2-5.4,0.2c-10.4,0-18.7-2.2-26-6.8c-8.5-5.4-15.6-14.3-21.2-26.7
+	c9.8-3.2,18.6-7.3,26.4-12.2c21.3-13.4,29.8-28.5,36.7-40.7l0-0.1l8.7-15.4c0.6-1.1,0.7-2.5,0.2-3.6c-0.5-1.2-1.6-2-2.8-2.3
+	L805.1,528c-0.3-0.1-0.5-0.1-0.8-0.1c-1.5,0-2.9,0.9-3.6,2.3l-4.4,9.2c-1.9,4.1-6.3,10.2-12.7,14.9c0,0-0.1,0.1-0.1,0.1
+	c-5.4,4.3-18.3,11.4-43.8,11.4h-1.4c-30,0-44.9-10.4-51.1-16.7c-9-10.2-13.6-23.1-13.6-38.4c0-20.2,8.1-34.8,23.9-43.3
+	c13.9-7.4,30.6-8.5,39.3-8.5c19.6,0,34.8,5.3,42.4,10.3c7.4,4.9,10,9.4,13.6,15.7l0.1,0.1l4.7,8.3c0.7,1.3,2.1,2,3.5,2
+	c0.3,0,0.6,0,0.9-0.1l53.5-11.9c1.3-0.3,2.3-1.1,2.8-2.3c0.5-1.2,0.4-2.5-0.2-3.6l-9.1-15.4c-5-8.4-15.4-26-37.6-39.9
+	c-27.5-17.1-62-18.9-75.6-18.9c-51.4,0-75.4,19.1-83.3,25.5c-26,19.6-39.2,47.5-39.2,82.9c0,32.7,11.7,60.4,33.8,80.1
+	c21.6,19.2,52,29.5,87.8,29.8c9.9,28.6,25,49.7,44.9,63c16.3,10.8,35.6,16.3,57.4,16.3c2.7,0,5.5-0.1,8.3-0.3
+	c44.5-2.8,95.8-38.6,106.7-130.9c2.4-18.9,3.7-38.2,3.7-57.3C955.8,267.5,756.7,68.4,512,68.4L512,68.4z"/>
+</svg>
+	<span>Data modeling and illustrations by Scott André Campbell <a class="darklink" href="https://scottandrecampbell.com">website</a> ©2022 in Python, JavaScript, and <a class="darklink"  href="https://threejs.org/">Three.js</a></span>
+</div>
+</div>
+
+<div id="svg-elements" style="display:none;">
+
+	<svg id="check-box-0" width="256px" height="256px" viewBox="0 0 256 256">
+		<g>
+			<path class="st0" d="M196.5,246h-137C32.2,246,10,223.8,10,196.5v-137C10,32.2,32.2,10,59.5,10h137.1c27.3,0,49.5,22.2,49.5,49.5
+				v137.1C246,223.8,223.8,246,196.5,246z M59.5,33C44.8,33,33,44.8,33,59.5v137.1c0,14.6,11.9,26.5,26.5,26.5h137.1
+				c14.6,0,26.5-11.9,26.5-26.5V59.5c0-14.6-11.9-26.5-26.5-26.5H59.5z"/>
+		</g>
+	</svg>
+
+	<svg id="check-box-1" width="256px" height="256px" viewBox="0 0 256 256">
+		<g>
+			<path class="st0" d="M203.1,59l-6.1-6.1c-5.6-5.6-14.6-5.6-20.2,0L128,101.8L79.2,52.9c-5.6-5.6-14.6-5.6-20.2,0L52.9,59
+				c-5.6,5.6-5.6,14.6,0,20.2l48.8,48.8l-48.8,48.8c-5.6,5.6-5.6,14.6,0,20.2l6.1,6.1c5.6,5.6,14.6,5.6,20.2,0l48.8-48.8l48.8,48.8
+				c5.6,5.6,14.6,5.6,20.2,0l6.1-6.1c5.6-5.6,5.6-14.6,0-20.2L154.2,128l48.8-48.8C208.6,73.6,208.6,64.6,203.1,59z"/>
+			<path class="st0" d="M196.5,10H59.5C32.2,10,10,32.2,10,59.5v137.1c0,27.3,22.2,49.5,49.5,49.5h137.1c27.3,0,49.5-22.2,49.5-49.5
+				V59.5C246,32.2,223.8,10,196.5,10z M223,196.5c0,14.6-11.9,26.5-26.5,26.5H59.5C44.8,223,33,211.2,33,196.5V59.5
+				C33,44.8,44.8,33,59.5,33h137.1c14.6,0,26.5,11.9,26.5,26.5V196.5z"/>
+		</g>
+	</svg>
+
+	<svg id="basic-circle" width="128px" height="128px" viewBox="0 0 128 128">
+		<circle class="st0" cx="64" cy="64" r="60"/>
+	</svg>
+
+	<svg id="basic-hexagon" width="128px" height="128px" viewBox="0 0 128 128">
+		<polygon points="111.89,91.649 111.89,36.351 64,8.701 16.11,36.351 16.11,91.649 64,119.299 "/>
+	</svg>
+
+	<svg id="within-circle" width="128px" height="128px" viewBox="0 0 128 128">
+		<path class="st0" d="M64,0C28.7,0,0,28.7,0,64c0,35.3,28.7,64,64,64s64-28.7,64-64C128,28.7,99.3,0,64,0z M64,119.2
+			C33.5,119.2,8.8,94.5,8.8,64c0-28.7,21.9-52.3,50-54.9v39.4L46,40.3c-2.4-1.5-5.5-0.8-7.1,1.5c-1.5,2.4-0.8,5.5,1.5,7.1L64,64
+			l23.6-15.1c2.4-1.5,3.1-4.7,1.5-7.1c-1.5-2.4-4.7-3.1-7.1-1.5l-12.8,8.2V9.1c28,2.6,50,26.2,50,54.9C119.2,94.5,94.5,119.2,64,119.2
+			z"/>
+	</svg>
+
+	<svg id="mpa-shape" width="512px" height="512px" viewBox="0 0 512 512">
+		<polygon class="st0" points="217.5,44.8 70.4,116.6 36.2,369.7 311.6,467.2 475.8,262 378.3,191.9 303,246.6 232.9,195.3
+	272.2,53.3 "/>
+	</svg>
+
+	<svg id="isobath-shape" width="512px" height="512px" viewBox="0 0 512 512">
+		<path d="M453.5,481.9c-0.2,10.9-9.1,19.7-20,19.7c-0.1,0-0.2,0-0.3,0c-27.6-0.4-58.9-0.9-87.6-14.6c-15.6-7.4-29.4-19.3-38.8-33.4
+			c-10.9-16.4-15.2-34.3-12.3-51.9c1.5-9.4,4.9-17.8,7.9-25.1c2.5-6.1,4.8-11.9,5.5-16.9c1-7.9-2.1-16.4-8-21.7
+			c-5.9-5.3-14.8-7.5-22.5-5.6c-10.6,2.6-20.2,12.2-30.5,22.4c-2.5,2.4-5,5-7.6,7.4c-20.5,19.5-53.6,43-94.9,44.1
+			c-42.1,1.2-80.7-24.5-91.8-60.9c-6.4-21-3.8-43.8,7.5-66c9.2-18,24-35.1,41.8-48.2c15.2-11.2,31.4-19.8,47.2-28.2
+			c16.3-8.7,31.6-16.8,45.1-27.2c41.1-31.7,63.1-87.5,55-138.7c-1.7-10.9,5.7-21.2,16.6-22.9c10.9-1.7,21.2,5.7,22.9,16.6
+			c5.1,32.3,1.2,66.1-11.3,97.7c-12.5,31.6-32.8,58.9-58.7,78.9c-16.1,12.5-33.7,21.8-50.7,30.9c-15.2,8.1-29.5,15.7-42.3,25.1
+			c-22.9,16.8-42.5,45.1-34.8,70.4c6.4,21.1,31.8,33.2,52.5,32.6c22.3-0.6,46.6-12.4,68.4-33.1c2.3-2.2,4.6-4.4,7-6.8
+			c13-12.9,27.8-27.6,49.1-32.9c20.5-5.1,43,0.5,58.8,14.6c15.7,14.1,23.8,35.9,21,56.8c-1.3,10.1-5,18.9-8.1,26.7
+			c-2.4,5.9-4.6,11.4-5.4,16.3c-2.1,13.1,7.3,32.6,28.8,42.8c20.9,9.9,46.4,10.3,71.1,10.7C444.8,461.8,453.6,470.9,453.5,481.9z
+			 M300.3,201.8c1.6-15.3,8.7-28.8,19.6-36.9c14-10.5,33.4-12.2,54.5-5c0,0,0,0,0,0c4,1.4,8.1,2.6,12.4,3.9
+			c24.2,7.4,54.3,16.6,67.9,50.2c9,22.4,4,48.1-12.2,62.6c-10.5,9.4-24.6,14-42.7,14c-1.6,0-3.2,0-4.8-0.1
+			c-25.2-1.1-47.4-8.6-64.3-21.8C309.4,252.1,297.8,226.4,300.3,201.8z M355.3,237.2c12.9,10.1,29.6,12.8,41.3,13.3
+			c11.8,0.5,17-1.8,19.3-3.8c3.6-3.2,4.4-11.2,1.8-17.8c-6.1-15.2-19.4-19.9-42.5-26.9c-4.4-1.4-9-2.8-13.6-4.3
+			c-4.3-1.5-8.4-2.2-11.7-2.2c-2.6,0-4.7,0.5-6,1.4c-1.8,1.4-3.4,5-3.8,9C339,216.8,345,229.1,355.3,237.2z"/>
+	</svg>
+
+<!--	special -->
+	<svg id="h-bar" width="512px" height="512px" viewBox="0 128 512 256">
+	<path class="st0" d="M409.654,204.846H102.346c-28.251,0-51.154,22.902-51.154,51.154c0,28.251,22.902,51.154,51.154,51.154h307.308
+		c28.252,0,51.154-22.902,51.154-51.154C460.808,227.749,437.905,204.846,409.654,204.846z"/>
+	</svg>
+
+	<svg id="h-bar-up" width="512px" height="512px" viewBox="0 128 512 256">
+		<path class="st0" d="M32.4,307.5c7.3,19.1,29.4,28.2,48.4,20.6L244,262.2c7.7-3.1,16.3-3.1,23.9,0l163.2,65.9
+		c19,7.7,41.1-1.5,48.4-20.6c7.1-18.5-2-39.4-20.4-46.8L268,183.5c-7.7-3.1-16.3-3.1-23.9,0L52.8,260.7
+		C34.4,268.2,25.3,289,32.4,307.5z"/>
+	</svg>
+
+	<svg id="h-bar-down" width="512px" height="512px" viewBox="0 128 512 256">
+		<path class="st0" d="M479.6,204.5c-7.3-19.1-29.4-28.2-48.4-20.6L268,249.8c-7.7,3.1-16.3,3.1-23.9,0L80.8,183.9
+			c-19-7.7-41.1,1.5-48.4,20.6c-7.1,18.5,2,39.4,20.4,46.8L244,328.5c7.7,3.1,16.3,3.1,23.9,0l191.2-77.2
+			C477.6,243.8,486.7,223,479.6,204.5z"/>
+	</svg>
+
+	<svg id="download-icon" width="256px" height="256px" viewBox="0 0 256 256">
+<path class="st0" d="M196.6,10H59.4C32.1,10,9.9,32.2,9.9,59.5v137c0,27.3,22.2,49.5,49.5,49.5h137c27.3,0,49.5-22.2,49.6-49.4V59.5
+	C246.1,32.2,223.8,10,196.6,10z M223.1,196.6c0,14.6-11.9,26.5-26.5,26.5H59.4c-14.6,0-26.5-11.9-26.5-26.5V59.5
+	C32.9,44.8,44.7,33,59.4,33h137.1c14.6,0,26.5,11.9,26.5,26.5V196.6z M201,131.4l-68.7,27.7c-2.7,1.1-5.8,1.1-8.6,0L55,131.4
+	c-6.6-2.7-9.9-10.2-7.3-16.8c2.6-6.9,10.6-10.2,17.4-7.4l41.1,16.6c3.9,1.6,8.2-1.3,8.2-5.5V59.1c0-7.8,6.5-14,14.3-13.6
+	c7.3,0.3,13,6.7,13,14v58.7c0,4.2,4.3,7.1,8.2,5.5l41.1-16.6c6.8-2.7,14.8,0.5,17.4,7.4C210.9,121.2,207.6,128.7,201,131.4z
+	 M196,201H60c-7.3,0-13.3-5.9-13.3-13.3v0c0-7.3,5.9-13.3,13.3-13.3H196c7.3,0,13.3,5.9,13.3,13.3v0C209.2,195.1,203.3,201,196,201z
+	"/>
+	</svg>
+
+</div>
+
+<!--type="x-shader/x-vertex"-->
+<script id="bathos-vertex-Shader" type="vert">
+	uniform float depth;
+	varying float vOpacity;
+	void main() {
+		vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+		vOpacity = 1.0 - (1.0 / (depth / -mvPosition.z));
+		gl_Position = projectionMatrix * mvPosition;
+		if( vOpacity < 0.0) vOpacity = 0.0;
+	}
+</script>
+<!--type="x-shader/x-fragment"-->
+<script id="bathos-fragment-Shader" type="frag">
+	uniform vec3 color;
+	uniform vec3 baseColor;
+	varying float vOpacity;
+	void main() {
+		float r = baseColor[0]+(color[0]*abs(vOpacity));
+		float g = baseColor[1]+(color[1]*abs(vOpacity));
+		float b = baseColor[2]+(color[2]*abs(vOpacity));
+		gl_FragColor = vec4( r, g, b, 1.0 );
+
+		#//gl_FragColor = vec4( color, vOpacity );
+		#//if( gl_FragColor.a < 0.05) discard;
+		if( vOpacity < 0.05) discard;
+	}
+</script>
+<!--type="x-shader/x-vertex"-->
+<script id="legend-vertex-Shader" type="vert">
+	uniform float level;
+	varying float vOpacity;
+	#//attribute float s_sample;
+
+	void main() {
+		vec4 mvPosition = viewMatrix * modelMatrix * instanceMatrix * vec4( position, 1.0);
+		vOpacity = 0.6*(level);
+		gl_Position = projectionMatrix * mvPosition;
+	}
+
+</script>
+<!--type="x-shader/x-fragment"-->
+<script id="legend-fragment-Shader" type="frag">
+	uniform vec3 color;
+	varying float vOpacity;
+	void main() {
+		gl_FragColor = vec4( color, vOpacity );
+		#//if( gl_FragColor.a < 0.05) discard;
+	}
+</script>
+<!--type="x-shader/x-vertex"-->
+<script id="map-lines-vertex-Shader" type="vert">
+	uniform float level;
+	varying float vOpacity;
+	#//attribute float s_sample;
+	void main() {
+		vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+		vOpacity = 1.0 - (1.0 / (level / -mvPosition.z));
+		#//0.6*(level);
+		gl_Position = projectionMatrix * mvPosition;
+	}
+
+</script>
+<!--type="x-shader/x-fragment"-->
+<script id="map-lines-fragment-Shader" type="frag">
+	uniform vec3 color;
+	varying float vOpacity;
+	void main() {
+		gl_FragColor = vec4( color, vOpacity );
+		if( gl_FragColor.a < 0.05) discard;
+	}
+</script>
+<!--type="x-shader/x-vertex"-->
+<script id="map-polygons-vertex-Shader" type="vert">
+	uniform float level;
+	varying float vOpacity;
+	uniform vec3 auxCameraPosition;
+
+	void main() {
+		vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+		#//vOpacity = 1.0 - (1.0 / (level / (-mvPosition.z * 0.5)));
+		gl_Position = projectionMatrix * mvPosition;
+
+		#//vec4 projected = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      	#//gl_Position = projected;
+
+		float xDelta = pow(mvPosition[0] - auxCameraPosition[0], 2.0);
+		float yDelta = pow(mvPosition[1] - auxCameraPosition[1], 2.0);
+		float zDelta = pow(mvPosition[2] - auxCameraPosition[2], 2.0);
+		vOpacity = 1.0 - (1.0 / (level / pow(xDelta + yDelta + zDelta, 0.5)));
+		if( vOpacity < 0.0) vOpacity = 0.0;
+	}
+</script>
+<!--type="x-shader/x-fragment"-->
+<script id="map-polygons-fragment-Shader" type="frag">
+	uniform vec3 color;
+	uniform vec3 baseColor;
+	varying float vOpacity;
+	void main() {
+		float r = baseColor[0]+(color[0]*abs(vOpacity));
+		float g = baseColor[1]+(color[1]*abs(vOpacity));
+		float b = baseColor[2]+(color[2]*abs(vOpacity));
+		gl_FragColor = vec4( r, g, b, 1.0 );
+		#//gl_FragColor = vec4( baseColor[0]+(color[0]*vOpacity), baseColor[1]+(color[1]*vOpacity), baseColor[2]+(color[2]*vOpacity), 1.0 );
+		#//if( gl_FragColor.a < 0.5) discard;
+		#//if( vOpacity < 0.05) discard;
+	}
+</script>
+
+
+</body>
+</html>

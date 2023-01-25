@@ -1,0 +1,19 @@
+body {
+    background-color: rgba(0,0,50,1.0);
+    color: lightgray;
+    margin:0;
+    padding:0;
+    font-family: heavy_data, sans-serif;
+}
+
+@font-face {
+    font-family: heavy_data;
+    font-weight: normal;
+    font-feature-settings: normal;
+    src: url(../font/dinregularwebfont.ttf);
+}
+
+@font-face {
+    font-family: heavy_data_bold;
+    src: url(../font/din-medium.ttf);
+}

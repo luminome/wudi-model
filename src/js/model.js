@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import * as window_config from '../window-config';
+//import * as window_config from '../window-config';
 import * as config from '../model-config.json';
 
 
@@ -38,13 +38,16 @@ export const model = {
         model.width = model.dimensions.x;
         model.height = model.dimensions.y;
 
-        const geometry = new THREE.PlaneGeometry(model.width, model.height, 1, 1);
-        const material = new THREE.MeshBasicMaterial({color: 0x36332D, side: THREE.DoubleSide});
+        const geometry = new THREE.BoxGeometry(model.width, model.height, 1);
+        geometry.translate(0,0,-0.5);
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x330000,
+            side: THREE.FrontSide,
+            transparent: true,
+            opacity:0.25
+        });
         model.map_plane = new THREE.Mesh(geometry, material);
-
-        model.container.rotateX(Math.PI / -2);
-        //model.container.position.set(-model.center.x, -0.01, model.center.y-model.map_vertical_deg_offset);
         model.container.add(model.map_plane);
-
+        model.container.rotateX(Math.PI / -2);
     }
 }

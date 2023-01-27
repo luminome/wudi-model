@@ -272,7 +272,8 @@ export function dragControls(dome_element, dragAction, kva) {
         if (pointer.down) {
             pointer.mod_delta.x = evt.clientX-pointer.origin.x;
             pointer.mod_delta.y = evt.clientY-pointer.origin.y;
-            pointer_relay(evt, 'drag');
+            //console.log(pointer.mod_delta.x, pointer.mod_delta.y);
+            if(Math.abs(pointer.mod_delta.x) > 1 || Math.abs(pointer.mod_delta.y) > 1) pointer_relay(evt, 'drag');
         }else{
             pointer_relay(evt, 'move');
         }

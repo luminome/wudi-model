@@ -137,16 +137,18 @@ export const controls = {
         }
 
         if (e_meta.scale_z) {
-            if (controls.cam.base_pos.z < controls.cam.min_zoom) {
+            if (controls.cam.base_pos.z*e_meta.scale_z < controls.cam.min_zoom) {
                 controls.cam.base_pos.z = controls.cam.min_zoom;
+            } else if (controls.cam.base_pos.z*e_meta.scale_z > controls.cam.max_zoom) {
+                controls.cam.base_pos.z = controls.cam.max_zoom;
             } else {
                 controls.cam.base_pos.multiplyScalar(e_meta.scale_z);
                 util_v.copy(controls.v.user.mouse.plane_pos).multiplyScalar(1 - e_meta.scale_z);
                 model.position.sub(util_v);
+                controls.v.user.mouse.plane_pos.sub(util_v);
             }
         }
 
-        controls.cam.run();
-        // e_meta = {};
+        // controls.cam.run();
     }
 }

@@ -2,6 +2,8 @@ import * as THREE from "three";
 import {events as EVT} from "./machine/ui-events.js";
 import {controls as CTL} from "./machine/ui-controls.js";
 import {environment as RUN} from "./machine/three-env.js";
+import {uiCameraDolly as CAM} from "./machine/ui-camera-dolly.js";
+
 import {model as MDL} from "./model.js";
 
 import {logger as LOG} from "./machine/logger.js";
@@ -12,6 +14,7 @@ import * as config from "../window-config";
 
 const runtime_timer = timer('main-initialization-loop').start();
 const obs = document.getElementById('obs');
+const obs_css = ['none', 'block'];
 
 const init_vars = {
     trace: LOG(obs),
@@ -42,6 +45,9 @@ const init_vars = {
             center_line:{
                 on: true,
             },
+            tools:{
+                on: true,
+            },
             position_lines:{
                 on: true,
             },
@@ -56,7 +62,12 @@ const init_vars = {
         }
     },
     action: 'none',
-    model: new THREE.Group()
+    model: new THREE.Group(),
+    frame: null,
+    animation(a){
+        init_vars.frame = a;
+        CAM.animate(a);
+    }
 }
 
 const view = {
@@ -70,6 +81,7 @@ const view = {
     plane: null,
     user_position: new THREE.Vector3(0, 0, 0),
     user_map_position: new THREE.Vector3(0, 0, 0),
+    user_map_interact_position: new THREE.Vector3(0, 0, 0),
     user_position_round: new THREE.Vector3(0, 0, 0),
     position_marks: {
         x: {
@@ -220,14 +232,6 @@ const view = {
             }
             plane.plane.translate(view.vc.b);
         }
-
-        if(init_vars.view.features.beautiful_position_lines.on){
-            view.set_position_mark();
-        }
-
-        if(init_vars.view.features.position_lines.on){
-            RUN.objects.position_lines.position.copy(init_vars.model.position).negate();
-        }
     },
     run_ticks_axes(axis, tick_index, swap = null) {
         const basis = {x: 'x', z: 'z'};
@@ -373,6 +377,7 @@ const view = {
 
         window.addEventListener('resize', view.redraw);
         view.redraw();
+
         init_vars.trace.log('bounds_rect', view.width, view.height);
 
         obs.style.color = config.colors.view_elements;
@@ -402,14 +407,16 @@ const view = {
             view.visible_dimensions = RUN.visibleAtZDepth(-default_view_z, CTL.cam.camera);
             view.max_allowable_zoom = ((default_view_z / view.visible_dimensions.w) * MDL.width) + 2.0;
             CTL.cam.base_pos.z = view.max_allowable_zoom;
-
-            CTL.cam.run();
-            view.run_optics();
-            view.run_ticks();
-            view.set_position_mark();
+            CTL.cam.max_zoom = view.max_allowable_zoom;
+            // CTL.cam.run();
+            // view.run_optics();
+            // view.run_ticks();
+            // view.set_position_mark();
         }
 
-
+        CTL.v.view.width = view.width;
+        CTL.v.view.height = view.height;
+        update();
     },
     set_position_mark(){
         ['x','z','y'].map(a =>{
@@ -445,23 +452,66 @@ const view = {
     }
 }
 
+//attempt to globalize the general update of things...
+/*
+so that the idle from the mover (CAM) can run it per-frame
+instead of only on event-call from drags-lite
+*/
+function update(){
+    CTL.cam.run();
+    view.run_optics();
+    view.run_ticks();
 
+    if(CAM.mover.is_moving){
+        init_vars.model.position.copy(CAM.mover.pos).negate();
+    }else{
+        CAM.mover.pos.copy(init_vars.model.position).negate();
+    }
 
+    if(init_vars.view.features.beautiful_position_lines.on) view.set_position_mark();
+    if(init_vars.view.features.position_lines.on) RUN.objects.position_lines.position.copy(init_vars.model.position).negate();
 
-//universal event callback:
+    if(init_vars.view.features.tools.on){
+        RUN.objects.tools.mover_marker.position.copy(CAM.mover.pos);
+        view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
+        RUN.objects.tools.set(CAM.mover.pos, view.vc.a);
+    }
+    return true;
+}
+
+//universal event callback
 function get_evt_data(source){
-
     // console.log(source, EVT.vars.callback[source]);
     if(source === 'screen') {
+        CTL.update(EVT.vars.callback[source].meta, init_vars.model);
+
+        if(!CAM.mover.is_moving) update(source);
+
         const m_evt = EVT.vars.callback[source].meta;
         init_vars.trace.watched['screen_meta_action'] = m_evt.action;
         init_vars.trace.watched['user_mouse_actual'] = CTL.v.user.mouse.actual;
+        MDL.model_position(view.user_map_interact_position.copy(CTL.v.user.mouse.plane_pos));
+
+        init_vars.trace.watched['user_map_pos'] = view.user_map_position;
+        init_vars.trace.watched['user_map_interact_pos'] = view.user_map_interact_position;
         init_vars.trace.watched['cam_project'] = CTL.cam.projected;
 
-        if(m_evt.action === 'click') init_vars.trace.log('click');
+        view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
+        view.vc.b.copy(init_vars.model.position).negate();
+
+        if(m_evt.action === 'click'){
+            const d = CTL.cam.max_zoom - (view.vc.a.length()/2);
+            init_vars.trace.log('click', d.toFixed(2));
+            CAM.mover.set_target(CAM.mover.pos, view.vc.a, d);
+            view.vc.c.subVectors(view.vc.a, CAM.mover.pos);
+            CAM.mover.set_rotation_target(view.vc.c);
+        }
+
+        if(m_evt.action === 'drag' && m_evt.delta_x !== null && m_evt.delta_y !== null){
+            CAM.mover.cancel();
+        }
 
 
-        CTL.update(EVT.vars.callback[source].meta, init_vars.model);
 
 
         if(init_vars.view.features.grid_marks.on && RUN.objects.hasOwnProperty('grid_marks')){
@@ -474,18 +524,20 @@ function get_evt_data(source){
 
 
 
-        view.run_optics();
-        view.run_ticks();
+        // view.run_optics();
+        // view.run_ticks();
     }
     if(source === 'keys') {
         if(EVT.vars.callback[source].active.includes('KeyQ')){
             init_vars.trace.watched['fps'] = RUN.fps;
+            init_vars.trace.watched['frame'] = init_vars.frame;
             log_state();
         }
         obs.style.display = obs_css[+EVT.vars.callback.toggle];
     }
 }
 
+//handle debug observations
 function log_state(){
     if(EVT.vars.callback.toggle){
         init_vars.trace.update();
@@ -505,22 +557,11 @@ EVT.vars.callback.update_function = get_evt_data;
 
 init_vars.trace.log('components loaded', 'ok');
 
-/*
-load the model scaffolding
-load the data
-prepare dom from data
-user interact (run)
- */
-
-
 window.addEventListener('DOMContentLoaded', (event) => {
     console.log('model-base loaded. continuing');
     init_vars.trace.log(runtime_timer.var_name, util.formatMs(runtime_timer.stop()));
     MDL.init();
     view.init();
+    //initialize CAM, aka ui-camera-dolly with the view loaded=in (initialized).
+    CAM.init(init_vars.model, CTL.cam, update);
 });
-
-
-
-///model_init_dom_elements();
-

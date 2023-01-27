@@ -44,7 +44,7 @@ function init(){
         scene.add(view_axes);
     }
 
-    const light = new THREE.PointLight(0xffffff, 10, 100);
+    const light = new THREE.PointLight(0xffffff, 6.0, environment.vars.view.scene_width * 6);
     light.position.set(0, environment.vars.view.scene_width * 3, 0);
     scene.add(light);
 
@@ -365,6 +365,60 @@ function post_init() {
             plush_mesh.instanceMatrix.needsUpdate = true;
             environment.objects.grid_marks = plush_mesh;
             environment.vars.model.add(plush_mesh);
+        },
+        add_tools(){
+            const tools = {
+                marker: null,
+                mover_marker: null,
+                ray: null,
+                start: new THREE.Vector3(),
+                end: new THREE.Vector3(),
+                object: new THREE.Group(),
+                vertices: [
+                    -1,0,0,
+                    1,0,0,
+                    0,0,-1,
+                    0,0,1,
+                ],
+                init(){
+                    const material = new THREE.LineBasicMaterial({color: 0x00FF00});
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array(tools.vertices), 3 ) );
+                    ['marker','mover_marker'].map(m=>{
+                        tools[m] = new THREE.LineSegments( geometry, material );
+                        tools[m].scale.setScalar(0.5);
+                        tools.object.add(tools[m]);
+                    });
+
+                    console.log(tools);
+
+
+
+                    const points = [tools.start, tools.end];
+                    const ray_geometry = new THREE.BufferGeometry().setFromPoints( points );
+                    ray_geometry.attributes.position.setUsage(THREE.DynamicDrawUsage);
+                    ray_geometry.attributes.position.needsUpdate = true;
+
+                    tools.ray = new THREE.Line( ray_geometry, material );
+                    tools.object.add(tools.ray);
+                },
+                set(a,b){
+                    tools.start.copy(a);
+                    tools.end.copy(b);
+                    util.set_buffer_at_index(tools.ray.geometry.attributes.position.array,0,tools.start.toArray());
+                    util.set_buffer_at_index(tools.ray.geometry.attributes.position.array,1,tools.end.toArray());
+                    tools.ray.geometry.attributes.position.needsUpdate = true;
+                    tools.marker.position.copy(tools.end);
+                }
+            }
+
+            tools.init();
+            // const a = new THREE.Vector3(0,0,0);
+            // const b = new THREE.Vector3(10,0,10);
+            // tools.set(a,b);
+            environment.vars.model.add(tools.object);
+            environment.objects.tools = tools;
+
         }
     }
 
@@ -389,6 +443,7 @@ function render(a) {
         return Math.floor(1000 / l_delta);
     }
     environment.fps = k_delta();
+    environment.vars.animation(a);
     renderer.render(scene, environment.controls.cam.camera);
 }
 

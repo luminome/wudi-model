@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 export function formatBytes(bytes, decimals = 2) {
     if (!+bytes) return '0 Bytes';
     const k = 1000; // 1024
@@ -180,4 +182,36 @@ export const projected = (v, camObj, vw, vh) => {
     v.project(camObj);
     v.setX((v.x + 1) * (vw / 2));
     v.setY((v.y - 1) * (vh / -2));
+}
+
+export const coords_from_array = (array, add_z = 0.0) => {
+    const build_coords = (coords_flat) => {
+        let buffer = [];
+        if(Array.isArray(coords_flat)) {
+            for (let i = 0; i < coords_flat.length; i += 2) {
+                buffer.push(coords_flat[i], coords_flat[i + 1], add_z);
+            }
+        }
+        return buffer;
+    }
+
+    let coords = [];
+    for (let a of array) {
+        if (a.length === 1) {
+            coords.push(build_coords(a[0]));
+        } else {
+            for (let b of a) {
+                coords.push(build_coords(b));
+            }
+        }
+    }
+    return coords;
+}
+
+export const shape_from_array = (array) =>{
+    const exterior_points = [];
+    for (let p = 0; p < array.length; p += 2) {
+        exterior_points.push(new THREE.Vector2(array[p]*1.0, array[p + 1]*1.0));
+    }
+    return new THREE.Shape(exterior_points);
 }

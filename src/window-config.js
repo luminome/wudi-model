@@ -1,15 +1,14 @@
 export const colors = {
-    downwelling:'#0000FFCC',
-    upwelling:'#FF0000CC',
-    mpa_s_designated:'#00FF00CC',
-    mpa_s_proposed:'#00FF0033',
-    places:'#FFFF00CC',
-    isobath:'#FFFFFFCC',
-
+    down_welling:'#0000FF',
+    up_welling:'#FF0000',
+    mpa_s_designated:'#00FF00',
+    mpa_s_proposed:'#00CC00',
+    places:'#FFFF00',
+    iso_bath:'#CCCCCC',
     info_bk_opacity: 0.85,
-    window: '#1D2733FF',
-    window_overlay: '#1D273333',
-
+    window: '#1D2733',
+    window_overlay: '#1D2733CC',
+    view_elements: '#666666',
     contours: {
         select: [0x4444CC, 0x4444CC]
     },
@@ -18,9 +17,7 @@ export const colors = {
     },
     wudi:{
         select: [0x660066, 0xFF00FF]
-    },
-    iso_bath:{
-        select: [0x333366, 0x4444FF]
     }
-
 }
+
+export const debug = true;

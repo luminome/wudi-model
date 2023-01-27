@@ -18,7 +18,8 @@ export function formatMs(ms, decimals = 2) {
 }
 export const average = array => array.reduce((a, b) => a + b) / array.length;
 export const deg_to_rad = deg => deg*Math.PI/180;
-
+export const rad_to_deg = rad => rad*180/Math.PI;
+export const color_to_hex = color => Number(`0x${color.toString().slice(1,color.length)}`);
 export function obj_to_download(content, filename, automatic=false) {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(content));
     const a = document.createElement('a') // Create "a" element
@@ -173,4 +174,10 @@ export const gauss = {
         gauss.gauss_internal(data_object, kernel, 0, false);
         return data_object;
     }
+}
+
+export const projected = (v, camObj, vw, vh) => {
+    v.project(camObj);
+    v.setX((v.x + 1) * (vw / 2));
+    v.setY((v.y - 1) * (vh / -2));
 }

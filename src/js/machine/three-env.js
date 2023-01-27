@@ -1,8 +1,7 @@
 import * as THREE from "three";
-import {mergeVertices} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import {BufferAttribute} from "three";
+import * as util from './util.js';
 
-let renderer, scene, model, view_axes, render_l_date, cam
+let renderer, scene, view_axes, render_l_date
 
 const util_c = new THREE.Color();
 
@@ -24,7 +23,7 @@ function init(){
 
     environment.controls.cam.camera = new THREE.PerspectiveCamera(60, environment.vars.view.width / environment.vars.view.height, 0.1, 300);
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(environment.vars.view.colors.window_background);
+    scene.background = new THREE.Color(environment.vars.view.colors.window_background);//util.color_to_hex(environment.vars.view.colors.window_background));
 
     renderer = new THREE.WebGLRenderer({
         powerPreference: "high-performance",
@@ -74,6 +73,115 @@ function post_init() {
             environment.vars.model.add(view_grid);
             environment.objects.helper_grid = view_grid;
         },
+        add_position_lines(){
+            const vertices = [
+                -1,0,0,
+                1,0,0,
+                0,0,-1,
+                0,0,1,
+            ]
+
+            const material = new THREE.LineBasicMaterial({color: 0xFFFFFF});
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array(vertices), 3 ) );
+
+            const line = new THREE.LineSegments( geometry, material );
+
+            environment.vars.model.add(line);
+            environment.objects.position_lines = line;
+
+        },
+        add_beautiful_position_lines(){
+            const ref = environment.vars.view.features.beautiful_position_lines;
+            const material = new THREE.RawShaderMaterial({
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthTest: false,
+                depthWrite: true,
+                uniforms: {
+                    color: {
+                        type: 'c',
+                        value: new THREE.Color(ref.color),//;//.setHex(ref.color) //new THREE.Color(0xFF00FF) //
+                    },
+                    startOpacity: {
+                        value: ref.opacity,
+                    },
+                    limitDistance: {
+                        value: ref.limit,
+                    }
+                },
+
+                vertexShader: `
+                    precision highp float;
+                    attribute vec2 uv;
+                    attribute vec4 position;
+                    varying vec4 vPos;
+                    uniform mat4 projectionMatrix;
+                    uniform mat4 modelViewMatrix;
+                    void main() {
+                      vPos = position;
+                      gl_Position = projectionMatrix * modelViewMatrix * position;
+                    }
+                `,
+                fragmentShader: `
+                    precision highp float;
+                    uniform vec3 color;
+                    uniform float opacity;
+                    uniform float startOpacity;
+                    uniform float limitDistance;
+                    varying vec4 vPos;
+                    void main() {
+                      float distance = clamp(length(vPos), 0., limitDistance);
+                      float opacity = startOpacity - distance / limitDistance;
+                      gl_FragColor = vec4(color, opacity);
+                    }
+                `
+            });
+            const axis_line_group = new THREE.Group();
+            //const segments = [];
+
+            const ralph = new THREE.Quaternion();
+            const rad = ref.weight*0.01;
+            const vu = new THREE.Vector3();
+
+            for (let n = 0; n < 3; n++) {
+
+                const r = [0, 0, 0];
+                r[2 - n] = 1.0;
+
+                vu.fromArray(r);
+                const c = n === 0 ? 2 : -2;
+                ralph.setFromAxisAngle(vu, Math.PI / c);
+
+                const geometry = new THREE.CylinderGeometry(rad, rad, ref.size, 16);
+                geometry.translate(0, ref.size / 2, 0);
+                geometry.applyQuaternion(ralph);
+                const neg = new THREE.Mesh(geometry, material);
+
+                const n_geometry = geometry.clone();
+                if (n === 1) {
+                    n_geometry.rotateX(Math.PI);
+                } else {
+                    ralph.setFromAxisAngle(vu, Math.PI);
+                    n_geometry.applyQuaternion(ralph);
+                }
+
+                const pos = new THREE.Mesh(n_geometry, material);
+
+                //segments.push(n === 1 ? [pos, neg] : [neg, pos]);
+
+                axis_line_group.add(neg);
+                axis_line_group.add(pos);
+            }
+
+            axis_line_group.renderOrder = 10;
+
+            environment.vars.model.add(axis_line_group);
+            environment.objects.beautiful_position_lines = axis_line_group;
+
+
+            //return {art: axis_line_group, segments: segments};
+        },
         add_center_line(){
             const vertices = [
                 -1,0,0,
@@ -94,9 +202,6 @@ function post_init() {
         add_grid_marks(){
             const grid_refs = environment.vars.view.features.grid_marks;
             const plush_material = new THREE.ShaderMaterial({
-                // transparent: true,
-                // flatShading: true,
-                /// blending: THREE.AdditiveBlending,
                 depthTest: true,
                 depthWrite: true,
                 uniforms: {
@@ -226,6 +331,12 @@ function post_init() {
             ]);
             const plushColors = new Float32Array(plush3dVertices.length);
             plushColors.fill(0.5);
+            const f_color = [];
+            util_c.set(environment.vars.view.colors.view_elements).toArray(f_color);
+
+            for(let i = 0; i < count; i++){
+                util.set_buffer_at_index(plushColors,i,f_color);
+            }
 
             let mesh_geometry = new THREE.BufferGeometry();
             mesh_geometry.setAttribute("position", new THREE.BufferAttribute(plush3dVertices, 3, false));
@@ -257,13 +368,13 @@ function post_init() {
         }
     }
 
-    if(environment.vars.view.features.default_view_z){
-        const default_view_z = environment.vars.view.features.default_view_z;
-        const visible_dimensions = visibleAtZDepth(-default_view_z, environment.controls.cam.camera);
-        environment.controls.cam.base_pos.z = ((default_view_z / visible_dimensions.w) * environment.vars.view.scene_width) + 12.0;
-        environment.vars.trace.log('visible_dimensions', visible_dimensions);
-        environment.controls.cam.run();
-    }
+    // if(environment.vars.view.features.default_view_z){
+    //     const default_view_z = environment.vars.view.features.default_view_z;
+    //     const visible_dimensions = visibleAtZDepth(-default_view_z, environment.controls.cam.camera);
+    //     environment.controls.cam.base_pos.z = ((default_view_z / visible_dimensions.w) * environment.vars.view.scene_width) + 12.0;
+    //     environment.vars.trace.log('visible_dimensions', visible_dimensions);
+    //     environment.controls.cam.run();
+    // }
 
     Object.entries(environment.vars.view.features).map(f => {
         if(f[1].hasOwnProperty('on') && f[1].on) post['add_'+f[0]]();
@@ -286,20 +397,23 @@ function animate(f) {
     render(f);
 }
 
+function resize(w,h){
+    renderer.setSize(w,h);
+}
+
 
 export const environment = {
-    objects:{
-
-    },
+    objects:{},
     frame: 0,
     fps: 0,
     init(dom, controls, vars){
         environment.controls = controls;
         environment.vars = vars;
         environment.dom = dom;
-        //cam = controls.cam;
         init();
         post_init();
         animate();
-    }
+    },
+    resize,
+    visibleAtZDepth
 }

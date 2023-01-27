@@ -8,14 +8,24 @@ const z_in = new THREE.Vector3(0, 0, 1);
 
 const cam = {
     camera: null,
+    euler: new THREE.Euler(),
+    applied_rotations:{
+        x: 0.0,
+        y: 0.0
+    },
+    constrain_rotation: true,
+    constrain_v: new THREE.Vector3(0, 0, 0),
+    constrain_angle: 0.0,
     default_z: 10,
     default_reset_z: 10,
-    base_pos: new THREE.Vector3(0, 5, 10),
+    root_plane: new THREE.Plane(y_up, 0),
+    base_pos: new THREE.Vector3(0, 0, 10),
     pos: new THREE.Vector3(0, 0, 0),
     projected: new THREE.Vector3(0, 0, 0),
     event_origin: new THREE.Vector3(0, 0, 0),
     distance: 1.0,
     min_zoom: 0.25,
+    max_zoom: null,
     scale: 1.0,
     frustum: new THREE.Frustum(),
     frustum_mat: new THREE.Matrix4(),
@@ -29,6 +39,7 @@ const cam = {
     init(){
         const cube_box = new THREE.BoxGeometry(2, 2, 2);
         cam.cube = new THREE.Mesh(cube_box, new THREE.MeshStandardMaterial({color: 0xffffff}));
+        cam.cube.rotateX(Math.PI*-0.5);
         cam.cube.updateMatrix();
         cam.cube.userData.originalMatrix = cam.cube.matrix.clone();
     },
@@ -44,13 +55,18 @@ const cam = {
 
         cam.frustum.setFromProjectionMatrix(cam.frustum_mat.multiplyMatrices(cam.camera.projectionMatrix, cam.camera.matrixWorldInverse));
         cam.camera.getWorldDirection(cam.util_v);
+
         cam.direction.copy(cam.util_v);
-        cam.right.crossVectors(cam.util_v, cam.camera.up);
-        cam.dot_y = cam.camera.up.dot(y_up);//root_plane.normal);
+        cam.right.crossVectors(cam.util_v, cam.camera.up).normalize();
+        cam.dot_y = cam.camera.up.dot(y_up);
         cam.dot_x = cam.right.dot(x_right);
         cam.dot_z = z_in.dot(cam.util_v);
 
         cam.distance = cam.camera.position.length();
+
+        cam.constrain_v.copy(y_up).applyAxisAngle(cam.right, Math.PI/-4);
+        cam.constrain_angle = cam.pos.angleTo(cam.constrain_v);// * Math.sign(cam.constrain_v.dot(cam.pos));
+
         cam.camera.updateProjectionMatrix();
     }
 }
@@ -69,6 +85,9 @@ export const controls = {
                 origin_pos: new THREE.Vector3(0, 0, 0),
                 actual: new THREE.Vector3(0, 0, 0),
             }
+        },
+        cube:{
+            rotation: new THREE.Vector2(0, 0)
         },
         view:{
 
@@ -101,7 +120,13 @@ export const controls = {
 
         if (e_meta.roto_x || e_meta.roto_y) {
             controls.cam.cube.rotateOnWorldAxis(y_up, e_meta.roto_x);
-            controls.cam.cube.rotateX(e_meta.roto_y);
+            if(controls.cam.constrain_rotation){
+                if(controls.cam.constrain_angle+e_meta.roto_y < (Math.PI*0.75) && controls.cam.constrain_angle+e_meta.roto_y > (Math.PI*0.25)){
+                    controls.cam.cube.rotateX(e_meta.roto_y);
+                }
+            }else{
+                controls.cam.cube.rotateX(e_meta.roto_y);
+            }
             controls.cam.cube.updateMatrixWorld();
         }
 

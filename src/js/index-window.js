@@ -111,6 +111,8 @@ const page = {
         intro_box.style.height = h-handle_box.height + 'px';
         page.init_dom();
         page.init_events();
+
+        if(config.debug) page.state_open();
     },
     interaction_pause(state=false){
         page.interaction_state = state;
@@ -155,6 +157,16 @@ const page = {
             window.scrollTo({ top: handle_box.top, behavior: 'smooth' });
         }
     },
+    state_open(){
+        intro_slide.style.display = 'none';
+        model_controls.classList.remove('hidden');
+        instructions_slide.style.display = 'none';
+        const instructions_control = document.getElementById('instructions');
+        instructions_control.classList.remove('active');
+        page.instructions_button.style.display = 'none';
+        page.interaction_pause(false);
+        page.started_interaction = true;
+    },
     state_control(evt){
         const from_control = evt.target.hasOwnProperty('param') ? evt.target : evt.target.closest('.control-button');
         console.log(from_control,from_control.param);
@@ -165,12 +177,7 @@ const page = {
             model_controls.classList.remove('hidden');
 
         }else if(from_control.param === 'instructions' || from_control.param === 'instructions-control'){
-            instructions_slide.style.display = 'none';
-            const instructions_control = document.getElementById('instructions');
-            instructions_control.classList.remove('active');
-            page.instructions_button.style.display = 'none';
-            page.interaction_pause(false);
-            page.started_interaction = true;
+            page.state_open();
         }
     },
     scroll_to_downloads(){

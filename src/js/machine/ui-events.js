@@ -127,7 +127,7 @@ export const events = {
     vars:{
         callback:{
             update_function: null,
-            toggle: false,
+            toggle: true,
             keys:{
                 active: [],
                 previous: []

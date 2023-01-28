@@ -78,7 +78,7 @@ a.darklink:visited{
 }
 
 #bounds{
-	background-color: darkcyan;
+	/*background-color: darkcyan;*/
 	display: block;
     box-sizing: border-box;
 	/*border:1px red dotted;*/
@@ -125,16 +125,18 @@ a.darklink:visited{
 }
 
 #intro-box{
+	/*border:1px darkred dotted;*/
+	box-sizing: border-box;
 	position: absolute;
 	top:0;
 	width:100vw;
-	height:100%;
+	height:100vh;
 	text-align: center;
 	pointer-events: none;
 	cursor: default;
 	display:table;
 	margin:0;
-	padding:0;
+	padding:20px;
 	overflow: visible;
 
 }
@@ -178,7 +180,7 @@ a.darklink:visited{
 	/*margin-right:auto;*/
 	font-size:20px !important;
 	/*z-index: 100;*/
-	margin-top:12px;
+	/*margin-top:12px;*/
 }
 
 #intro-button, #instructions-button{
@@ -423,7 +425,7 @@ a.darklink:visited{
 	fill: inherit;
 }
 
-.button{
+.button-check-box{
 	display:flex;
 	padding-left: 8px;
 	opacity:0.75;
@@ -431,34 +433,26 @@ a.darklink:visited{
 	cursor: pointer;
 }
 
-.button:hover{
+.button-check-box:hover{
 	opacity:1.0;
 }
 
-.button div {
+.button-check-box div {
 	display: inline-block;
-	/*font-size:0.8em;*/
-	/*line-height: 1.2em;*/
 	vertical-align: baseline;
 	pointer-events: all;
 }
 
-.button svg{
+.button-check-box svg{
 	top:3px;
 	position:relative;
 	display: inline-block;
-	/*fill:context-fill;*/
 	width:18px;
 	height:18px;
 	padding-right: 4px;
 	vertical-align: center;
 	pointer-events: all;
 }
-
-/*.button svg g path{*/
-/*	!*fill:context-fill;*!*/
-/*	fill: -moz-default-color;*/
-/*}*/
 
 
 .bar{
@@ -504,9 +498,16 @@ a.darklink:visited{
 
 .time-container .time-element.selected{
 	color: white;
+	opacity:0.75;
+	background-color: #1e315c;
+}
+
+.time-container .time-element:hover{
+	color: white;
 	opacity:1.0;
 	background-color: #1e315c;
 }
+
 
 #time_element_temp{
 	display: none;
@@ -527,6 +528,7 @@ a.darklink:visited{
 	background-color: rgba(0,120,0,0.1);
 	position:absolute;
 	font-size: 12px;
+	line-height: 18px;
 	top:0;
 	right:0;
 	margin-left:4px;
@@ -777,7 +779,8 @@ a.darklink:visited{
 	#intro-instructions .box-wrapper {
 		max-width:none;
 		width: auto;
-		margin: 12px 46px 12px 12px;
+		margin: 0;
+		/*12px 46px 12px 12px;*/
 	}
 }
 

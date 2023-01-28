@@ -12,12 +12,9 @@ const map_router = require('./routes/obs-map');
 const wudi_router = require('./routes/obs-wudi');
 
 const bodyParser = require('body-parser');
-
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
-//
 
-//
 app.use('/map', map_router);
 app.use('/wudi', wudi_router);
 

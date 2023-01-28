@@ -1,11 +1,11 @@
-function do_callback(callback, value, args=null){
-	if (callback && typeof(callback) === "function") callback(value, args);
+function do_callback(callback, value, args=null, args2= null){
+	if (callback && typeof(callback) === "function") callback(value, args, args2);
 }
 
-async function post_loader(resource_obj_list, prog_callback=null) {
+async function post_loader(resource_obj, prog_callback=null) {
 	let container = [];
-	resource_obj_list.forEach(obj => {
-		if (prog_callback) do_callback(prog_callback, 1, obj);
+	resource_obj.list.forEach(obj => {
+		if (prog_callback) do_callback(prog_callback, 1, obj, resource_obj.name);
 		let ref = fetch(obj.url, {
 			method: 'POST',
 			headers: {
@@ -23,24 +23,24 @@ async function post_loader(resource_obj_list, prog_callback=null) {
 			return response.json()
 		})
 		.then(function (data) {
-			if (prog_callback) do_callback(prog_callback, -1, obj);
+			if (prog_callback) do_callback(prog_callback, -1, obj, resource_obj.name);
 			return data
 		})
 		.catch((error) => {
 			//return Promise.reject();
 			obj.error = error.toString();
-			if(prog_callback) do_callback(prog_callback, 0, obj);
+			if(prog_callback) do_callback(prog_callback, 0, obj, resource_obj.name);
 			return error
 		})
 		container.push(ref);
 	});
 
 	const done = await Promise.all(container);
-	resource_obj_list.forEach((obj,i) => obj.raw = done[i].data);
-	return resource_obj_list;
+	resource_obj.list.forEach((obj,i) => obj.raw = done[i].data);
+	return resource_obj;
 }
 
-async function loader(resource_obj_list, prog_callback=null) {
+async function loader(resource_obj, prog_callback=null) {
 	let container = [];
 	const opts = {
 	  headers: {
@@ -48,8 +48,8 @@ async function loader(resource_obj_list, prog_callback=null) {
 	  }
 	}
 
-	resource_obj_list.forEach(obj => {
-		if (prog_callback) do_callback(prog_callback, 1, obj);
+	resource_obj.list.forEach(obj => {
+		if (prog_callback) do_callback(prog_callback, 1, obj, resource_obj.name);
 
 		let ref = fetch(obj.url, opts)
 		.then(response => {
@@ -60,20 +60,20 @@ async function loader(resource_obj_list, prog_callback=null) {
 			return response.text()
 		})
 		.then(function (text) {
-			if(prog_callback) do_callback(prog_callback, -1, obj);
+			if(prog_callback) do_callback(prog_callback, -1, obj, resource_obj.name);
 			return obj.type === 'json' ? JSON.parse(text) : text;
 		})
 		.catch((error) => {
 			obj.error = error;
-            if(prog_callback) do_callback(prog_callback, 0, obj);
+            if(prog_callback) do_callback(prog_callback, 0, obj, resource_obj.name);
 			return error;
 		})
 		container.push(ref);
 	});
 
 	const done = await Promise.all(container);
-	resource_obj_list.forEach((obj,i) => obj.raw = done[i]);
-	return resource_obj_list;
+	resource_obj.list.forEach((obj,i) => obj.raw = done[i]);
+	return resource_obj;
 }
 
 export {loader, post_loader};

@@ -11,11 +11,13 @@ import {model as MDL} from "./model.js";
 import {logger as LOG} from "./machine/logger.js";
 import timer from './machine/timer.js';
 import * as util from './machine/util.js';
-import * as config from "../window-config";
+import windowJsConfig from "../window-js-config";
 
 const runtime_timer = timer('main-initialization-loop').start();
 const obs = document.getElementById('obs');
 const obs_css = ['none', 'block'];
+const display_inline_array = ['none', 'inline-block'];
+const display_array = ['none', 'block'];
 
 const init_vars = {
     trace: LOG(obs),
@@ -24,8 +26,8 @@ const init_vars = {
         height: window.innerHeight,
         scene_width: 20,
         colors:{
-            window_background: config.colors.window,
-            view_elements: config.colors.view_elements,
+            window_background: windowJsConfig.colors.window,
+            view_elements: windowJsConfig.colors.view_elements,
         },
         features:{
             default_view_z: 30.0,
@@ -41,7 +43,7 @@ const init_vars = {
                 pitch: 2.0,
                 shape_length: 10.0,
                 shape_scale: 0.01,
-                color: config.colors.view_elements,
+                color: windowJsConfig.colors.view_elements,
             },
             center_line:{
                 on: true,
@@ -56,7 +58,7 @@ const init_vars = {
                 on: true,
                 size: 40.0,
                 weight: 1,
-                color: config.colors.view_elements,
+                color: windowJsConfig.colors.view_elements,
                 opacity: 0.5,
                 limit: 60.0
             }
@@ -102,11 +104,14 @@ const view = {
         }
     },
     UP: new THREE.Vector3(0, 1, 0),
-    width: null,
-    height: null,
-    bounds_bottom_offset: 20,
+    model_width: null,
+    model_height: null,
+    bounds_width: null,
+    bounds_height: null,
+    bounds_bottom_offset: windowJsConfig.bounds_bottom_offset,
     camera_auto_affine: false,
     max_allowable_zoom: 20.0,
+    model_visible_dimensions: null,
     grid_resolution: null,
     axis_planes: [],
     ticks:{
@@ -130,15 +135,17 @@ const view = {
             CTL.cam.cube.userData.originalMatrix.decompose(CTL.cam.cube.position, CTL.cam.cube.quaternion, CTL.cam.cube.scale);
             CTL.cam.cube.matrix.copy(CTL.cam.cube.userData.originalMatrix);
 
-            CTL.cam.run();
-
-            view.run_optics();
-            //adaptive_scaling_wudi();
-            view.run_ticks();
+            // CTL.cam.run();
+            //
+            // view.run_optics();
+            // //adaptive_scaling_wudi();
+            // view.run_ticks();
             //refresh_sectors();
             if(init_vars.view.features.beautiful_position_lines.on) view.set_position_mark();
 
             init_vars.trace.log('recenter_map', 'ui_control');
+
+            update();
         },
         camera_behavior(){
             vars.view.camera_auto_affine = !vars.view.camera_auto_affine;
@@ -151,15 +158,35 @@ const view = {
             window_redraw();
         },
         instructions_state(){
-            vars.view.instructions_active = !vars.view.instructions_active;
-            this.classList.toggle('control-toggle');
-            const instructions_slide = document.getElementById('intro-instructions');
-            instructions_slide.style.display = display_array[+vars.view.instructions_active];//'block';
+            //set previously on page
+            // vars.view.instructions_active = !vars.view.instructions_active;
+            // this.classList.toggle('control-toggle');
+            // const instructions_slide = document.getElementById('intro-instructions');
+            // instructions_slide.style.display = display_array[+vars.view.instructions_active];//'block';
         },
         mpa_s_state(){
             vars.mpa_s_visible = !vars.mpa_s_visible;
             this.classList.toggle('control-toggle');
             control_appearance_sectors('mpa_s', vars.mpa_s_visible );
+        },
+
+        button_check_box: {
+            set_state(id, state){
+                const button = document.getElementById(id);
+                button.querySelector('#check-box-0').style.display = display_inline_array[+!state];
+                button.querySelector('#check-box-1').style.display = display_inline_array[+state];
+                button.setAttribute('data-state', state);
+            },
+            click(e){
+                const parent = e.target.closest('.button-check-box');
+                const b_state = parent.dataset.state === 'true';
+                view.ui_control.button_check_box.set_state(parent.id, !b_state);
+                if(parent.dataset.layer){
+                    return;
+                     //const wudi_layer = scene.getObjectByName('wudi_'+parent.dataset.layer);
+                     //wudi_layer.visible = !b_state;
+                }
+            }
         }
     },
     make_position_mark(radius) {
@@ -195,8 +222,8 @@ const view = {
         const mark = document.createElement('div');
         mark.classList.add('dmark');
         mark.innerHTML = '0.0';
-        mark.style.color = config.colors.view_elements;//'gray';//vars.colors.hex_css(vars.colors.chart_tick);
-        mark.style.backgroundColor = config.colors.window_overlay;
+        mark.style.color = windowJsConfig.colors.view_elements;//'gray';//vars.colors.hex_css(vars.colors.chart_tick);
+        mark.style.backgroundColor = windowJsConfig.colors.window_overlay;
         dom_target.appendChild(mark);
         return mark;
     },
@@ -309,11 +336,11 @@ const view = {
 
                     plane.markers_divs[m].innerHTML = `${(ticks.number).toFixed(view.grid_resolution < 1 ? 2 : 0)}º ${ticks.card}`;
                     ticks.rect = plane.markers_divs[m].getBoundingClientRect();
-                    util.projected(view.vc.c, CTL.cam.camera, view.width, view.height);
+                    util.projected(view.vc.c, CTL.cam.camera, view.model_width, view.model_height);
 
                     if (plane.name === 'x') {
                         ticks.left = (view.vc.c.x - (ticks.rect.width / 2));
-                        ticks.top = (view.height - view.x_axis_inset) - (ticks.rect.height / 2);
+                        ticks.top = (view.model_height - view.x_axis_inset) - (ticks.rect.height / 2);
                     } else {
                         ticks.left = (view.y_axis_inset);
                         ticks.top = (view.vc.c.y - (ticks.rect.height / 2));
@@ -322,7 +349,7 @@ const view = {
                     plane.markers_divs[m].style.left = ticks.left + 'px';
                     plane.markers_divs[m].style.top = ticks.top + 'px';
 
-                    const cas = (ticks.top > view.height || ticks.top < 0 || ticks.left > view.width || ticks.left < 0);
+                    const cas = (ticks.top > view.height || ticks.top < 0 || ticks.left > view.model_width || ticks.left < 0);
                     plane.markers_divs[m].style.display = cas ? 'none' : 'block';///display_array[+!cas];
                 }
             }
@@ -330,12 +357,29 @@ const view = {
         //obs_handler({'F': vars.view.width, 'S': sum});
         //console.log(ticks);
     },
-    init(){ //init the chart style the ticks rendering systems
+    init(){
+        //init the chart style the ticks rendering systems
         document.getElementById('recenter').addEventListener('mouseup', view.ui_control.recenter_map);
         document.getElementById('camera-motion').addEventListener('mouseup', view.ui_control.camera_behavior);
         document.getElementById('navigation').addEventListener('mouseup', view.ui_control.navigation_state);
         document.getElementById('instructions').addEventListener('mouseup', view.ui_control.instructions_state);
         document.getElementById('mpa_s').addEventListener('mouseup', view.ui_control.mpa_s_state);
+
+        ['year','month'].map(type => {
+            const target = document.getElementById(type + '_container');
+            for(let el of target.childNodes){
+                el.setAttribute('title',`Select ${el.dataset.type} ${el.dataset.date}`);
+                el.addEventListener('mouseup', DAT.SELECTOR.time.select_time);
+            }
+        });
+
+
+
+        const buttons = [...document.querySelectorAll(".button-check-box")];
+        buttons.map(b => {
+            b.parentNode.addEventListener('mouseup', view.ui_control.button_check_box.click);
+            view.ui_control.button_check_box.set_state(b.id, true);
+        });
 
         view.axis_planes.push({
             name: 'x',
@@ -345,7 +389,6 @@ const view = {
             mark: view.make_position_mark(1.0),
             markers_divs: view.make_ticks_divs()
         });
-
         view.axis_planes.push({
             name: 'z',
             plane: new THREE.Plane(),
@@ -377,46 +420,81 @@ const view = {
         }
 
         window.addEventListener('resize', view.redraw);
+
         view.redraw();
 
-        init_vars.trace.log('bounds_rect', view.width, view.height);
+        init_vars.trace.log('bounds_rect', view.bounds_width, view.bounds_height);
 
-        obs.style.color = config.colors.view_elements;
-        obs.style['background-color'] = config.colors.window_overlay;
+        obs.style.color = windowJsConfig.colors.view_elements;
+        obs.style['background-color'] = windowJsConfig.colors.window_overlay;
     },
     redraw(){
         const bounds = document.getElementById('bounds');
+        const model_dom = document.getElementById('model');
+        const intro_box_dom = document.getElementById('intro-box');
+        const model_controls_dom = document.getElementById('model-controls');
+
         bounds.style.height = (window.innerHeight-view.bounds_bottom_offset)+'px';
 
         const bounds_rect = bounds.getBoundingClientRect();
-        view.width = bounds_rect.width;
-        view.height = bounds_rect.height;
 
-        view.x_major_axis.style.top = (view.height-view.x_axis_inset)+'px';
-        view.x_major_axis.style.width = view.width+'px';
+        view.bounds_width = bounds_rect.width;
+        view.bounds_height = bounds_rect.height;
+
+
+        let bars_height = 0;
+        const bars = [...document.querySelectorAll('.bar')];
+
+        bars.map(b => {
+            if(windowJsConfig.dom_references.hasOwnProperty(b.id)){
+                if(windowJsConfig.dom_references[b.id].on){
+                    const bbox = b.getBoundingClientRect();
+                    if(b.style.display !== 'none') {
+                        bars_height += bbox.height;
+                        b.classList.remove('hidden');
+                    }
+                }
+            }
+        });
+
+        const stack_height = view.bounds_height - bars_height;
+        view.model_width = view.bounds_width;
+        view.model_height = stack_height;
+
+        model_dom.style.height = view.model_height + 'px';
+        intro_box_dom.style.height = view.model_height + 'px';
+        model_controls_dom.style.bottom = (bars_height + view.bounds_bottom_offset) + 'px';
+        //h-handle_box.height + 'px';
+        //
+        // ww = w;
+        // wh = ((h - vars.view.bottom_buffer) - bars_height) - handle_box.height;
+        //
+        // plot.style.width = ww + 'px';
+        // plot.style.height = wh + 'px';
+        // intro_box_dom.style.height = wh + 'px';
+
+
+        view.x_major_axis.style.top = (view.model_height-view.x_axis_inset)+'px';
+        view.x_major_axis.style.width = view.model_width+'px';
 
         view.y_major_axis.style.left = (view.y_axis_inset)+'px';
-        view.y_major_axis.style.height = view.height+'px';
+        view.y_major_axis.style.height = view.model_height+'px';
 
         if (CTL.cam !== null) {
-
-            CTL.cam.camera.aspect = view.width / view.height;
+            CTL.cam.camera.aspect = view.model_width / view.model_height;
             CTL.cam.camera.updateProjectionMatrix();
-            RUN.resize(view.width, view.height);
-
+            RUN.resize(view.model_width, view.model_height);
             const default_view_z = init_vars.view.features.default_view_z;
-            view.visible_dimensions = RUN.visibleAtZDepth(-default_view_z, CTL.cam.camera);
-            view.max_allowable_zoom = ((default_view_z / view.visible_dimensions.w) * MDL.width) + 2.0;
+            view.model_visible_dimensions = RUN.visibleAtZDepth(-default_view_z, CTL.cam.camera);
+            view.max_allowable_zoom = ((default_view_z / view.model_visible_dimensions.w) * MDL.width) + 2.0;
             CTL.cam.base_pos.z = view.max_allowable_zoom;
             CTL.cam.max_zoom = view.max_allowable_zoom;
-            // CTL.cam.run();
-            // view.run_optics();
-            // view.run_ticks();
-            // view.set_position_mark();
         }
 
-        CTL.v.view.width = view.width;
-        CTL.v.view.height = view.height;
+        CTL.v.view.width = view.model_width;
+        CTL.v.view.height = view.model_height;
+
+
         update();
     },
     set_position_mark(){
@@ -426,7 +504,7 @@ const view = {
             //console.log(mark);
 
             view.vc.a.fromArray(mark.pos);//copy(CTL.v.user.mouse.actual).multiplyScalar(-1.0);//negate();
-            util.projected(view.vc.a, CTL.cam.camera, view.width, view.height);
+            util.projected(view.vc.a, CTL.cam.camera, view.model_width, view.model_height);
 
             if(a === 'y'){
                 mark_dom.textContent = `ELEV ${(135.0-util.rad_to_deg(CTL.cam.constrain_angle)).toFixed(2)}${mark.card}`;//"hello";
@@ -562,7 +640,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
     console.log('model-base loaded. continuing');
     init_vars.trace.log(runtime_timer.var_name, util.formatMs(runtime_timer.stop()));
     MDL.init(init_vars);
-    DAT.init(MDL, init_vars);
+    DAT.init(MDL, view, init_vars);
     view.init();
     //initialize CAM, aka ui-camera-dolly with the view loaded=in (initialized).
     CAM.init(init_vars.model, CTL.cam, update);

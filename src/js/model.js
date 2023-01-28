@@ -2,7 +2,7 @@ import * as THREE from "three";
 import * as util from "./machine/util";
 import timer from './machine/timer.js';
 import * as config from '../model-config';
-import * as window_config from '../window-config';
+import * as window_config from '../window-js-config';
 import jsConfig from '../model-js-config';
 
 //it's okay for the model to have the data on it. where else would it be?.

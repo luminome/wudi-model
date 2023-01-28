@@ -1,11 +1,158 @@
 import {loader, post_loader} from './loader.js';
-import * as window_config from '../../window-config';
+import windowJsConfig from '../../window-js-config';
 import jsConfig from '../../model-js-config';
 import * as util from "./util";
 import timer from "./timer";
 
 const DATA = {};
 const SELECTOR = {
+    time: {
+        data: {year: ['all'], month: ['all'], has_default: 'all', selected: [], loaded: [], required: []},
+        clear_selection(time_type){
+            const target = document.getElementById(time_type + '_container');
+            for(let t of target.childNodes){
+                t.dataset.selected = 'false';
+                t.classList.remove('selected');
+            }
+            const all_element = document.querySelector(`.time-element[data-type=${time_type}][data-date="all"]`);
+            all_element.dataset.selected = 'true';
+            all_element.classList.add('selected');
+        },
+        select_time(evt) {
+            //#// the amount of code here is awful!
+            const element = evt.target;
+            const select_all = element.dataset.date === 'all';
+
+            if(!select_all){
+                const isTrueSet = (element.dataset.selected === 'true');
+                element.dataset.selected = (!isTrueSet).toString();
+                element.classList.toggle('selected');
+            }else{
+                SELECTOR.time.clear_selection('year');
+            }
+
+            SELECTOR.time.data.required = [];
+            const all_selector = document.querySelector(`.time-element[data-type=${element.dataset.type}][data-date="all"]`);
+            const target = document.getElementById(element.dataset.type + '_container');
+            const validator = [];
+
+            for(let t of target.childNodes){
+                if(select_all){
+                    t.dataset.selected = 'false';
+                    t.classList.remove('selected');
+                }else{
+                    if(t.dataset.selected === 'true' && t.dataset.date !== 'all') validator.push(t.dataset.date);
+                }
+            }
+
+            if(validator.length > 0){
+                all_selector.dataset.selected = 'false';
+                all_selector.classList.remove('selected');
+                if(element.dataset.type === 'year'){
+                    document.getElementById('month_container').style.display = 'flex';
+                    document.getElementById('month_container').classList.remove('hidden');
+                    modelDataIo.view.redraw();
+                }
+            } else {
+                all_selector.dataset.selected = 'true';
+                all_selector.classList.add('selected');
+                if(element.dataset.type === 'year'){
+                    document.getElementById('month_container').style.display = 'none';
+                    document.getElementById('month_container').classList.add('hidden');
+                    SELECTOR.time.clear_selection('month');
+                    modelDataIo.view.redraw();
+                }
+            }
+
+
+            console.log(validator);
+
+
+            /*
+
+            times_select: function (type, element = null) {
+            this.times.required = [];
+            if (this.times[type].includes(this.times.has_default)) this.times[type] = [];
+
+            if (element) {
+                const pos = this.times[type].indexOf(element.data);
+                if (pos === -1) {
+                    this.times[type].push(element.data);
+                } else {
+                    this.times[type].splice(pos, 1);
+                }
+            }
+
+            if (this.times[type].length === 0 && !this.times[type].includes(this.times.has_default)) {
+                this.times[type].push(this.times.has_default);
+            }
+
+            for (let y of this.times.years) {
+                if (y !== 'all' && this.times.months[0] === 'all') this.times.required.push(y.toString());
+                for (let m of this.times.months) {
+                    const month = y + String(m).padStart(2, '0');
+                    if (m !== 'all') this.times.required.push(month);
+                }
+            }
+
+            this.times.selected = this.times.years[0] === 'all' ? ['all'] : this.times.required;
+
+            this.times.required = this.times.required.filter((t) => !this.times.loaded.includes(t));
+
+            //console.log('this.times', this.times);
+
+            wudi_get_data(this.times.required);
+
+            obs_handler({'T': Object.entries(this.times)});
+
+            vars.dom_time[type].map((y) => y.set_state(this.times[type].includes(y.data)));
+
+            if (this.times.years[0] !== 'all') {
+                const years_grp = [...this.times.years];
+                const months_grp = [...this.times.months];
+
+                //Y: u/d days per year
+                //M: u/d days (August) 2003
+                //Ds: daily WUDI values
+                //Y: u/d days month of x
+
+                const n_months = util.to_lexical_range(months_grp, 'mo');//.toString();//.trim();
+                ///alert(`-${months}-${util.to_lexical_range(years_grp)}`);
+                //alert(months.length);
+                // console.log(n_months);
+                title.innerHTML = n_months[0] !== undefined ? n_months + ' ' + util.to_lexical_range(years_grp) : util.to_lexical_range(years_grp);
+
+                document.getElementById('months_container').style.display = 'flex';
+                //document.getElementById('years_container').style.height = '24px';
+                //if(vars.view.init_state)
+                window_redraw();
+            }else{
+                title.innerHTML = '1979 to 2020';
+                document.getElementById('months_container').style.display = 'none';
+                //document.getElementById('years_container').style.height = '48px';
+                //if(vars.view.init_state)
+                window_redraw();
+            }
+
+        },
+
+
+
+
+
+
+
+
+
+
+
+            //console.log(evt.target);
+
+
+        }
+        */
+        },
+    },
     wudi:{
         times:{
             loaded:[]
@@ -125,9 +272,6 @@ const data_callback = (obj_list) => {
             }
         }
     });
-    if(window_config.debug) {
-        console.log(DATA);
-    }
     return true;
 }
 
@@ -137,54 +281,74 @@ const req = {
     bytes_loaded:0,
     delta_time: null,
     complete(resource){
-        resource.map(r=>{
-            req.bytes_loaded += r.size;
+        resource.list.map(r=>{
+            resource.bytes_loaded += r.size;
         });
-        const message = `(${resource.length}) files. (${util.formatBytes(req.bytes_loaded)}) completed in ${util.formatMs(req.delta_time.stop())}`;
+        const message = `${resource.name} (${resource.list.length}) files. (${util.formatBytes(resource.bytes_loaded)}) completed in ${util.formatMs(resource.delta_time.stop())}`;
         modelDataIo.init_vars.trace.log(message);
-        data_callback(resource);
+        data_callback(resource.list);
+
+        modelDataIo.bytes_loaded_total += resource.bytes_loaded;
+        modelDataIo.load_segments.actual ++;
+        if(modelDataIo.load_segments.actual === modelDataIo.load_segments.total){
+            modelDataIo.init_with_data();
+        }
     },
-    progress_callback(count, obj){
+    progress_callback(count, obj, obj_asset=null){
         if(count === -1){
-            const message = `${obj.name} (${util.formatBytes(obj.size)}) ${util.formatMs(obj.timer.stop())}`;
+            const message = `${obj_asset} ${obj.name} (${util.formatBytes(obj.size)}) ${util.formatMs(obj.timer.stop())}`;
             modelDataIo.init_vars.trace.log(message);
         }
-        if(count === 0){
-            //error!
-            const message = `${obj.name} ${obj.url} caused an error:"${obj.error}" ${util.formatMs(obj.timer.stop())}`;
+        if(count === 0){ // ⛔️ error!
+            const message = `${obj_asset} ${obj.name} ${obj.url} caused an error:"${obj.error}" ${util.formatMs(obj.timer.stop())}`;
             modelDataIo.init_vars.trace.log(message);
         }
     },
-    async load(obj_array){
-        obj_array.map(r=>{
+    async load(asset_obj){
+        asset_obj.list.map(r=>{
             r.timer = timer(r.name).start();
         });
-        req.queue_length = obj_array.length;
-        req.delta_time = timer('loader').start();
-        return await loader(obj_array, req.progress_callback);
+        asset_obj.bytes_loaded = 0;
+        asset_obj.queue_length = asset_obj.list.length;
+        asset_obj.delta_time = timer('loader').start();
+        return await loader(asset_obj, req.progress_callback);
     },
-    async post_method_load(obj_array){
-        obj_array.map(r=>{
+    async post_method_load(asset_obj){
+        asset_obj.list.map(r=>{
             r.timer = timer(r.name).start();
         });
-        req.queue_length = obj_array.length;
-        req.delta_time = timer('loader').start();
-        return await post_loader(obj_array, req.progress_callback);
+        asset_obj.bytes_loaded = 0;
+        asset_obj.queue_length = asset_obj.list.length;
+        asset_obj.delta_time = timer('loader').start();
+        return await post_loader(asset_obj, req.progress_callback);
     }
 }
 
 export const modelDataIo = {
     model: null,
-    init(model, init_vars){
+    bytes_loaded_total:0,
+    load_segments: {
+        total:windowJsConfig.debug ? 3 : 2,
+        actual:0
+    },
+    // 👉️  PHASE ONE
+    init(model, view, init_vars){
+        modelDataIo.delta_time = timer('modelDataIo init -> init_with_data').start();
+        modelDataIo.view = view;
         modelDataIo.model = model;
         modelDataIo.init_vars = init_vars;
-        if(window_config.debug) {
-            const test_on = [{url: '/data/data_test.json', type: 'json', name:'test', size:0}];
-            modelDataIo.req.load(test_on).then(r => modelDataIo.req.complete(r));
+
+        if(windowJsConfig.debug) modelDataIo.req.load(jsConfig.assets.test).then(r => modelDataIo.req.complete(r));
+        modelDataIo.req.load(jsConfig.assets.static).then(r => modelDataIo.req.complete(r));
+        modelDataIo.req.post_method_load(jsConfig.assets.database).then(r => modelDataIo.req.complete(r));
+    },
+    // 👉️ PHASE TWO
+    init_with_data(){
+        const message = `${modelDataIo.delta_time.var_name} ${util.formatBytes(modelDataIo.bytes_loaded_total)} ${util.formatMs(modelDataIo.delta_time.stop())}`;
+        modelDataIo.init_vars.trace.log(message);
+        if(windowJsConfig.debug) {
+            console.log(DATA);
         }
-        //console.log(jsConfig);
-        modelDataIo.req.load(jsConfig.static_data).then(r => modelDataIo.req.complete(r));
-        modelDataIo.req.post_method_load(jsConfig.database_queries).then(r => modelDataIo.req.complete(r));
     },
     DATA,
     SELECTOR,

@@ -11,7 +11,7 @@ const process = (res, query, data) => {
         res.write(result.data);
         res.end();
     }
-    console.log(data.query, 'api process was called.');
+    console.log(data.query.name, 'api process was called.');
     return true;
 }
 

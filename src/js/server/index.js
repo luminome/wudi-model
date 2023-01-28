@@ -8,18 +8,18 @@ app.use(express.static('static'));
 
 const pack = require('../../../package.json');
 
-// const map_router = require('./routes/obs-map');
-// const wudi_router = require('./routes/obs-wudi');
+const map_router = require('./routes/obs-map');
+const wudi_router = require('./routes/obs-wudi');
 
-// const bodyParser = require('body-parser');
+const bodyParser = require('body-parser');
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 //
-// app.use(bodyParser.urlencoded({ extended: false }));
-// app.use(bodyParser.json());
+
 //
-// app.use(express.json());
-//
-// app.use('/map', map_router);
-// app.use('/wudi', wudi_router);
+app.use('/map', map_router);
+app.use('/wudi', wudi_router);
 
 app.listen(port, () => {
   console.log(`${pack.name} app listening at http://localhost:${port}`);

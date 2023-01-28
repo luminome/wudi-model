@@ -1,13 +1,14 @@
 import * as THREE from "three";
-import {events as EVT} from "./machine/ui-events.js";
-import {controls as CTL} from "./machine/ui-controls.js";
-import {environment as RUN} from "./machine/three-env.js";
-import {uiCameraDolly as CAM} from "./machine/ui-camera-dolly.js";
-
+import {events as EVT} from "./machine/ui-events";
+import {controls as CTL} from "./machine/ui-controls";
+import {environment as RUN} from "./machine/three-env";
+import {uiCameraDolly as CAM} from "./machine/ui-camera-dolly";
+import {modelDataIo as DAT} from "./machine/model-data-io";
 import {model as MDL} from "./model.js";
 
+
+
 import {logger as LOG} from "./machine/logger.js";
-import {loader} from './machine/loader.js';
 import timer from './machine/timer.js';
 import * as util from './machine/util.js';
 import * as config from "../window-config";
@@ -560,7 +561,8 @@ init_vars.trace.log('components loaded', 'ok');
 window.addEventListener('DOMContentLoaded', (event) => {
     console.log('model-base loaded. continuing');
     init_vars.trace.log(runtime_timer.var_name, util.formatMs(runtime_timer.stop()));
-    MDL.init();
+    MDL.init(init_vars);
+    DAT.init(MDL, init_vars);
     view.init();
     //initialize CAM, aka ui-camera-dolly with the view loaded=in (initialized).
     CAM.init(init_vars.model, CTL.cam, update);

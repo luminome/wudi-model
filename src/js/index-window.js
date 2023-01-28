@@ -1,4 +1,4 @@
-import * as util from './util';
+// import * as util from './util';
 import * as config from '../window-config';
 
 const display_array = ['none', 'block'];

@@ -1,4 +1,6 @@
 /.parcel-cache/
 /dist/
+/static/data/
+/databases/
 /node_modules/
 /package-lock.json

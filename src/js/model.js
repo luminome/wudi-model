@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import * as util from "./machine/util";
+import timer from './machine/timer.js';
 import * as config from '../model-config';
 import * as window_config from '../window-config';
 import jsConfig from '../model-js-config';
@@ -120,7 +121,7 @@ class Sector {
                 const ref = vars.refs.mpa_s[obj['id']];
 
                 obj['line_strings'].map((mpa, n) => {
-                    const shape = shape_from_array(mpa);
+                    const shape = util.shape_from_array(mpa);
                     const geometry = new THREE.ShapeBufferGeometry(shape);
                     const t_mat = mpa_mat.clone();
                     const t_color = ref.STATUS_ENG === 'Designated' ? vars.colors.mpa_s_designated : vars.colors.mpa_s_proposed;
@@ -132,7 +133,7 @@ class Sector {
                     this_mpa_s.add(mesh);
                 })
 
-                this_mpa_s.userData.mpa_s_outlines = coords_from_array([obj['line_strings']]);
+                this_mpa_s.userData.mpa_s_outlines = util.coords_from_array([obj['line_strings']]);
                 this_mpa_s.userData.area = ref.REP_AREA ? ref.REP_AREA : 0.0;
                 this_mpa_s.userData.index = obj['id'];
                 this_mpa_s.userData.level = object.level;
@@ -263,8 +264,9 @@ class Sector {
         this.group.userData.owner = this;
         this.objects.plane = plane_line;
 
-        const meta_json = [{url: `${this.path}/meta.json`, type: 'json', name: 'meta'}]
-        fetchAll(meta_json, loader_notify)
+        const meta_json = [{url: `${this.path}/meta.json`, type: 'json', name: 'meta'}];
+
+        model.loader.load(meta_json)
             .then(object_list => this.load_meta(object_list))
             .then(state => {
                 if (state) {
@@ -327,7 +329,9 @@ export const model = {
         origin.x = model.natural_bounds[0] + ((model.width / 2) + origin.x);
         origin.z = model.natural_bounds[1] + ((model.height / 2) - origin.z);
     },
-    init() {
+    init(init_vars) {
+        // model.HOM = init_vars; // init_vars in this case.
+        // model.DAT = DATA_obj;
         const map_min = new THREE.Vector2(config.bounds[0], config.bounds[1]);
         const map_max = new THREE.Vector2(config.bounds[2], config.bounds[3]);
         model.dimensions = new THREE.Vector2();
@@ -342,14 +346,17 @@ export const model = {
 
         const geometry = new THREE.BoxGeometry(model.width, model.height, 1);
         geometry.translate(0, 0, -0.5);
+
         const material = new THREE.MeshStandardMaterial({
             color: 0x330000,
             side: THREE.FrontSide,
             transparent: true,
             opacity: 0.25
         });
+
         model.map_plane = new THREE.Mesh(geometry, material);
         model.container.add(model.map_plane);
         model.container.rotateX(Math.PI / -2);
+
     }
 }

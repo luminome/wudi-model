@@ -22,6 +22,7 @@ const windowJsConfig = {
     },
     debug: true,
     bounds_bottom_offset: 20,
+    graph_obj_height: 120,
     dom_references:{
         "q-nav-bar": {
             on: false,

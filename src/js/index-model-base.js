@@ -3,15 +3,15 @@ import {events as EVT} from "./machine/ui-events";
 import {controls as CTL} from "./machine/ui-controls";
 import {environment as RUN} from "./machine/three-env";
 import {uiCameraDolly as CAM} from "./machine/ui-camera-dolly";
-import {modelDataIo as DAT} from "./machine/model-data-io";
-import {model as MDL} from "./model.js";
-
-
+import {modelDataIo, modelDataIo as DAT} from "./machine/model-data-io";
+import {default as MDL} from "./model.js";
+import graph from "./graph.js";
 
 import {logger as LOG} from "./machine/logger.js";
 import timer from './machine/timer.js';
 import * as util from './machine/util.js';
 import windowJsConfig from "../window-js-config";
+import jsConfig from "../model-js-config";
 
 const runtime_timer = timer('main-initialization-loop').start();
 const obs = document.getElementById('obs');
@@ -73,7 +73,266 @@ const init_vars = {
     }
 }
 
+const download_component = {
+    download_link(content, mimeType, filename){
+        const a = document.createElement('a') // Create "a" element
+        const blob = new Blob([content], {type: mimeType}) // Create a blob (file-like object)
+        const url = URL.createObjectURL(blob) // Create an object URL from blob
+        a.setAttribute('href', url) // Set "a" element link
+        a.setAttribute('download', filename) // Set download filename
+        a.setAttribute('size', blob.size.toString()) // Set download filename
+        a.classList.add('download-link');
+        //a.click() // Start downloading
+        a.innerHTML = `download ${filename}`;
+        return a;
+    },
+    output(block){
+        const wudi_textual_output = [];
+        const wudi_geodata_output = [];
+        const wudi_temporal_output = [];
+        const point_data = DAT.DATA.SD.wudi_points.raw;
+
+        const output_text = view.download_output_dom;
+        output_text.innerHTML = '';
+
+        const geodata_header = point_data.keys.slice(0,6);
+        geodata_header.unshift('point_id');
+        wudi_geodata_output.push(geodata_header);
+
+        const temporal_header_equiv = {
+            all: ['time', 'point_id', 'up_days', 'down_days'],
+            year: ['time', 'point_id', 'up_days', 'down_days'],
+            month: ['time', 'point_id', 'wudi_value', 'qualifies']
+        }
+
+        let wudi_data_header = null;
+        let point_traces = [];
+
+        for (let point of block) {
+
+            if(!point_traces.includes(point.id) && point.id !== 'AVG'){
+                const values = point_data.data[point.id].slice(0,6);
+                values.unshift(point.id);
+                point_traces.push(point.id);
+                wudi_geodata_output.push(values);
+            }
+
+            if(!wudi_data_header){
+                wudi_data_header = temporal_header_equiv[point.style];
+                wudi_temporal_output.push(wudi_data_header);
+            }
+
+            for(let pt of point.ref_data.data){
+                let pt_lex = null;
+                let qual = null;
+
+                if(point.style === 'month'){
+                    if(pt[1] > jsConfig.wudi_UPWthr) qual = 'up';
+                    if(pt[1] < jsConfig.wudi_DNWthr) qual = 'down';
+                    pt_lex = [pt[0], point.id, pt[1], qual];
+                }else{
+                    pt_lex = [pt[0], point.id, pt[1], Math.abs(pt[2])];
+                }
+                wudi_temporal_output.push(pt_lex);
+            }
+        }
+
+        const date = new Date(Date.now()).toISOString().slice(0, 19).replace('T', ' ');
+
+        wudi_textual_output.push('Wind-based Upwelling & Downwelling Index (WUDI) data base for Mediterranean shorelines (Bensoussan N., Pinazo C., Rossi V. (2022)).');
+        wudi_textual_output.push(`Accessed on ${date}`);
+        wudi_textual_output.push(`Data points selected: ${point_traces.map(p =>'Nº'+p)}`);
+        wudi_textual_output.push(`Temporal series selected: ${view.title_dom.innerHTML}`);
+
+        function make_html_table(table_data){
+            const shlex = [];
+            for(let row of table_data){
+                const parts = row.map(r => `<div class="output-cell">${r}</div>`);
+                shlex.push(`<div class="output-row">${parts.join('')}</div>`);
+            }
+            return `<div class="output-table">${shlex.join('\n')}</div>`
+        }
+
+        const wudi_textual = wudi_textual_output.join('\n');
+        const wudi_geodata = wudi_geodata_output.join('\n');
+        const wudi_timeseries = wudi_temporal_output.join('\n');
+
+        const download_textual_button = download_component.download_link(wudi_textual, 'data:text/plain;charset=utf-8', 'wudi-points-readme.txt');
+        const download_geodata_button = download_component.download_link(wudi_geodata, 'data:text/plain;charset=utf-8', 'wudi-points-geodata.csv');
+        const download_temporal_button = download_component.download_link(wudi_timeseries, 'data:text/plain;charset=utf-8', 'wudi-points-timeseries.csv');
+
+        const dl_buttons = [
+            download_textual_button,
+            download_geodata_button,
+            download_temporal_button
+        ];
+
+        const output_sections = [
+            ['selected wudi points information', wudi_textual, 'raw-text', download_textual_button],
+            ['selected wudi points geodata', make_html_table(wudi_geodata_output), '', download_geodata_button],
+            ['selected wudi points information', make_html_table(wudi_temporal_output), '', download_temporal_button],
+        ];
+
+
+
+        function get_download(){
+            [...document.querySelectorAll('.download-link')].map(a =>{
+                a.click();
+            });
+        }
+
+        function get_download_button(){
+            const dl = document.createElement('div');
+            dl.classList.add('output-section');
+            dl.classList.add('output-download-link');
+
+            let bytes = 0;
+            dl_buttons.map(a =>{
+                bytes += parseInt(a.getAttribute('size'));
+            })
+
+            const al = document.createElement('a');
+            al.setAttribute('href','#');
+            al.innerHTML = 'download selected point data ('+(bytes/1000).toFixed(2)+'k)';
+            al.addEventListener('mouseup', get_download);
+
+            dl.appendChild(al);
+            return dl
+        }
+
+        output_text.appendChild(get_download_button());
+
+        output_sections.map(outs =>{
+            const section = document.createElement('div');
+            section.classList.add('output-section');
+            section.appendChild(outs[3]);
+            section.innerHTML += `<div class="output-section-title">${outs[0]}</div>`;
+            section.innerHTML += `<div class="output-section-content ${outs[2]}">${outs[1]}</div>`;
+            output_text.appendChild(section);
+        })
+
+
+    },
+}
+
+const graph_component = {
+    active: false,
+    dom: document.getElementById("graph-obj-bar"),
+    run() {
+        const style_current = graph_component.dom.style.display;
+
+        if(DAT.SELECTOR.point.data.selected.length) {
+
+            const times_list = DAT.SELECTOR.time.data.selected.length === 0 ? ['all'] : DAT.SELECTOR.time.data.selected;
+
+            const diagonal = times_list.map(t => {
+                return Math.max(...DAT.SELECTOR.point.data.selected.map(p => DAT.DATA.TD.point_cache[`${p}-${t}`].meta));
+            });
+
+            console.log('selected points', DAT.SELECTOR.point.data.selected);
+
+            const cache_for_output = [];
+            const max_len = Math.max(...diagonal);
+            const aggregate = [];
+            let mean = [0, 0];
+            for(let g=0; g<max_len; g++) aggregate.push([0,0]);
+            let res_count = 0;
+            let ref_style = null;
+
+            const time_keys = [];
+
+            for (let t of times_list) {
+                for (let p of DAT.SELECTOR.point.data.selected) {
+                    const time_slot = `${p}-${t}`;
+                    const reference = DAT.DATA.TD.point_cache[time_slot];
+
+                    ref_style = reference.style;
+
+                    reference.data.map((d, i) => {
+                        if(reference.style === 'month'){
+                            aggregate[i][0] += d[1];
+                            mean[0] += d[1];
+                        }else{
+                            aggregate[i][0] += d[1];
+                            mean[0] += d[1];
+                            aggregate[i][1] += d[2];
+                            mean[1] += d[2];
+                        }
+
+                        time_keys.push(d[0]);
+                    });
+                    res_count++;
+                    cache_for_output.push({id:p, tid:time_slot, ref_data:reference, style:ref_style});
+                }
+            }
+
+
+
+            mean[0] /= res_count;
+            mean[1] /= res_count;
+
+            const aggregate_avg = [0,0];
+            aggregate_avg[0] = aggregate.map(a => Math.round((a[0] / res_count) * 10000) / 10000);
+            aggregate_avg[1] = aggregate.map(a => Math.round((a[1] / res_count) * 10000) / 10000);
+
+            if(DAT.SELECTOR.point.data.selected.length > 1){
+                const r_dat = [];
+                for(let ac = 0; ac < aggregate.length; ac++){
+                    r_dat.push([time_keys[ac], aggregate_avg[0][ac], aggregate_avg[1][ac]]);
+                }
+                cache_for_output.push({id:'AVG', tid:0, ref_data:{data:r_dat, id:'all'}, style:ref_style});
+            }
+
+            download_component.output(cache_for_output);
+
+            const up_col = windowJsConfig.colors.up_welling;//utility_color.fromArray(vars.colors.upwelling).getHex();
+            const dn_col = windowJsConfig.colors.down_welling;//utility_color.fromArray(vars.colors.downwelling).getHex();
+
+            let y_limits = [];
+            if(mean[1] === 0){
+                y_limits = [Math.min(...aggregate_avg[0]), Math.max(...aggregate_avg[0])];
+            }else{
+                y_limits = [Math.min(...aggregate_avg[1]), Math.max(...aggregate_avg[0])];
+            }
+
+            const graph_obj = {
+                xlim: [0, max_len],
+                ylim: y_limits,
+                mean: [[mean[0] / max_len], [mean[1] / max_len]],
+                data: aggregate_avg,
+                up_color: up_col+'CC', //vars.colors.hex_css(up_col,0.5),
+                up_color_select: up_col,
+                down_color: dn_col+'CC',
+                down_color_select: dn_col,
+                x_range_start: ref_style === 'all' ? 1978 : 1,
+                graph_style: ref_style,
+                wudi_th_up: jsConfig.wudi_UPWthr,
+                wudi_th_down: jsConfig.wudi_DNWthr,
+                main_title: view.title_dom.innerHTML
+            }
+
+            ///console.log(graph_obj, vars.selecta.wudi);
+
+            graph(graph_obj, view.bounds_width, windowJsConfig.graph_obj_height, DAT.SELECTOR);
+
+            graph_component.dom.classList.remove('hidden');
+            graph_component.dom.style.display = 'block';
+            graph_component.dom.style.height = windowJsConfig.graph_obj_height+'px';
+            graph_component.active = true;
+
+        }else{
+            graph_component.dom.style.display = 'none';
+            graph_component.active = false;
+        }
+
+        if(style_current !== graph_component.dom.style.display) view.redraw();
+
+    }
+}
+
 const view = {
+    title_dom: document.getElementById('title'),
+    download_output_dom: document.getElementById('output-text'),
     vc: {
         a: new THREE.Vector3(0, 0, 0),
         b: new THREE.Vector3(0, 0, 0),
@@ -169,7 +428,16 @@ const view = {
             this.classList.toggle('control-toggle');
             control_appearance_sectors('mpa_s', vars.mpa_s_visible );
         },
-
+        scroll_to_downloads(){
+            const box = document.getElementById('output').getBoundingClientRect();
+            window.scrollTo({ top: box.top, behavior: 'smooth' });
+        },
+        graph_close(){
+            DAT.SELECTOR.point.deselect_all();
+            graph_component.dom.style.display = 'none';
+            graph_component.active = false;
+            view.redraw();
+        },
         button_check_box: {
             set_state(id, state){
                 const button = document.getElementById(id);
@@ -182,9 +450,8 @@ const view = {
                 const b_state = parent.dataset.state === 'true';
                 view.ui_control.button_check_box.set_state(parent.id, !b_state);
                 if(parent.dataset.layer){
-                    return;
-                     //const wudi_layer = scene.getObjectByName('wudi_'+parent.dataset.layer);
-                     //wudi_layer.visible = !b_state;
+                    const wudi_layer = MDL.container.getObjectByName('wudi_'+parent.dataset.layer);
+                    wudi_layer.visible = !b_state;
                 }
             }
         }
@@ -364,6 +631,8 @@ const view = {
         document.getElementById('navigation').addEventListener('mouseup', view.ui_control.navigation_state);
         document.getElementById('instructions').addEventListener('mouseup', view.ui_control.instructions_state);
         document.getElementById('mpa_s').addEventListener('mouseup', view.ui_control.mpa_s_state);
+        document.getElementById('graph-close').addEventListener('mouseup', view.ui_control.graph_close);
+        document.getElementById('graph-download').addEventListener('mouseup', view.ui_control.scroll_to_downloads);
 
         ['year','month'].map(type => {
             const target = document.getElementById(type + '_container');
@@ -640,7 +909,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
     console.log('model-base loaded. continuing');
     init_vars.trace.log(runtime_timer.var_name, util.formatMs(runtime_timer.stop()));
     MDL.init(init_vars);
-    DAT.init(MDL, view, init_vars);
+    DAT.init(MDL, view, graph_component, init_vars);
     view.init();
     //initialize CAM, aka ui-camera-dolly with the view loaded=in (initialized).
     CAM.init(init_vars.model, CTL.cam, update);

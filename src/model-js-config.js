@@ -64,17 +64,26 @@ const jsConfig = {
                 {"url": "/map", "table": "protected_regions", "type": "json-ser", "name": "mpa_s", "style":"point", "tck": [0, 0, 0]},
                 {"url": "/wudi", "table": "turn_table", "type": "json-ser", "name": "wudi_points", "tck": [0, 0, 0]},
                 {"url": "/wudi", "table": "assoc", "type": "json-ser", "name": "wudi_assoc", "tck": [0, 0, 0]},
-                {"url": "/wudi", "tim": "40", "type": "json-ser", "name": "wudi_data", "tck": [0, 0, 0]},
+                {"url": "/wudi", "tim": "40", "type": "json-ser", "name": "wudi_temporal_data", "tck": [0, 0, 40]},
             ],
         },
         static:{
             name: 'static_datasets',
             list: [
                 {url: './data/v2-raw-geonames-1.txt', type: 'csv_text', name: 'geonames', columns: 1, size:0, style: 'data', geom_index: 0},
-                {url: './data/raw-isobath-100m-1.txt', type: 'csv_text', name: 'iso_bath', columns: 1, size:0, style: 'multi_line', geom_index: 0}
+                {url: './data/raw-isobath-100m-1.txt', type: 'csv_text', name: 'iso_bath', columns: 1, size:0, style: 'multi_line', geom_index: 0},
+                {url: './data/raw-georegions-11.txt', type: 'csv_text', name: 'georegions', columns: 11, size:0, style: 'data', geom_index: 0}
             ]
         }
     },
+    graph_styles: {3:'all', 4:'year', 6:'month', 8:'daily'},
+    wudi_selecta_stem_pixels: 50,
+	bar_scale: 0.2,
+	bar_scale_width: 0.5,
+	point_scale: 0.025,
+	wudi_point_scale: 0.005,
+	wudi_UPWthr: 0.4325,
+	wudi_DNWthr: -0.3905,
 }
 
 export default jsConfig

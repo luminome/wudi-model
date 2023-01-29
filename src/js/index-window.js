@@ -276,10 +276,6 @@ const page = {
         }else if(from_control.param === 'instructions' || from_control.param === 'instructions-control'){
             page.state_open();
         }
-    },
-    scroll_to_downloads(){
-        const box = document.getElementById('output').getBoundingClientRect();
-        window.scrollTo({ top: box.top, behavior: 'smooth' });
     }
 }
 

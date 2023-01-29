@@ -27,6 +27,7 @@ const cam = {
     min_zoom: 0.25,
     max_zoom: null,
     scale: 1.0,
+    camera_scale: 0.0,
     frustum: new THREE.Frustum(),
     frustum_mat: new THREE.Matrix4(),
     direction: new THREE.Vector3(0, 0, 0),
@@ -41,7 +42,9 @@ const cam = {
         cam.cube = new THREE.Mesh(cube_box, new THREE.MeshStandardMaterial({color: 0xffffff}));
         cam.cube.rotateX(Math.PI*-0.5);
         cam.cube.updateMatrix();
+        cam.cube.updateMatrixWorld();
         cam.cube.userData.originalMatrix = cam.cube.matrix.clone();
+        //cam.run();
     },
     run() {
         cam.util_v.copy(cam.base_pos).applyQuaternion(cam.cube.quaternion);
@@ -53,7 +56,6 @@ const cam = {
         cam.util_v.set(0,0,0);
         cam.camera.lookAt(cam.util_v);
 
-        cam.frustum.setFromProjectionMatrix(cam.frustum_mat.multiplyMatrices(cam.camera.projectionMatrix, cam.camera.matrixWorldInverse));
         cam.camera.getWorldDirection(cam.util_v);
 
         cam.direction.copy(cam.util_v);
@@ -68,6 +70,9 @@ const cam = {
         cam.constrain_angle = cam.pos.angleTo(cam.constrain_v);// * Math.sign(cam.constrain_v.dot(cam.pos));
 
         cam.camera.updateProjectionMatrix();
+        cam.camera.updateMatrixWorld();
+        cam.camera.updateMatrix();
+        cam.frustum.setFromProjectionMatrix(cam.frustum_mat.multiplyMatrices(cam.camera.projectionMatrix, cam.camera.matrixWorldInverse));
     }
 }
 
@@ -109,7 +114,6 @@ export const controls = {
         controls.v.user.mouse.raw.x = (e_meta.pos_x / controls.v.view.width) * 2 - 1;
         controls.v.user.mouse.raw.y = -(e_meta.pos_y / controls.v.view.height) * 2 + 1;
         controls.v.user.mouse.raw.z = 0.0;
-
         controls.ray_caster.setFromCamera(controls.v.user.mouse.raw, controls.cam.camera);
         controls.ray_caster.ray.intersectPlane(controls.v.plane, controls.v.user.mouse.plane_pos);
 

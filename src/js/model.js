@@ -6,90 +6,6 @@ import windowJsConfig from "../window-js-config";
 import jsConfig from '../model-js-config';
 
 
-function apply_adaptive_scale(inst, v, v_lim, index, sign, a_lim) {
-
-    inst.getMatrixAt(index, mu);
-    mu.decompose(vw, qu, vu);
-    const value = a_lim === 0 || v === 0 ? (0.0001) : (v / a_lim*sign);
-    const color_value = v_lim === 0 || v === 0 ? (0.0001) : (v / v_lim*sign);
-    vu.setZ(value * vars.bar_scale);
-    vu.setY((1 - camera_scale) * vars.bar_scale_width);
-    mu.compose(vw, qu, vu);
-    inst.setMatrixAt(index, mu);
-
-    if (!inst.userData.td.color_default[index].selected) {
-        utility_color.fromArray(inst.userData.td.base_color).multiplyScalar(Math.abs(color_value));
-        inst.setColorAt(index, utility_color.clone());
-        inst.userData.td.color_default[index].color = utility_color.toArray();
-    }
-
-    return vu.z;
-}
-
-function adaptive_scaling_wudi() {
-    // return;
-    const wudi = scene.getObjectByName('wudi');
-    //console.log('adaptive_scaling_wudi', wudi, wudi.children.length);
-    if (wudi && wudi.children.length && vars.selecta.wudi.times.selected.length) {
-        const wudi_up = scene.getObjectByName('wudi_up');
-        const wudi_down = scene.getObjectByName('wudi_down');
-
-        const test = wudi.children[0].userData.td;
-        let data_index;
-        let cherf = 0;
-        const visible = {set: [], up: [], down: []};
-
-        for (let c = 0; c < test.position.length; c++) {
-            data_index = vars.data.wudi_index[c];
-            //const r_index = wudi_up.userData.td.index.indexOf(index);
-            vw.fromArray(test.mid_position[c]);
-            map_container.localToWorld(vw);
-            //#//TODO make depend on distance from view also.
-            //#//ALERT TO HOW u_me vs. u_max is leveraged here.
-            if (camera_frustum.containsPoint(vw)) {
-                visible.set.push([c, data_index, cherf]);
-                visible.up.push([vars.data.wudi_data.current[data_index][3]]);
-                visible.down.push([vars.data.wudi_data.current[data_index][4]]);
-                cherf++;
-            }else{
-                if(!mover.is_rotating && vars.selecta.wudi.points.selected.includes(data_index)) vars.selecta.wudi.point_select(data_index);
-                // if (wudi_up.userData.td.color_default[c] && wudi_up.userData.td.color_default[c].selected) {
-                //     //deselect point!
-                //     //console.log(data_index,c);
-                //     if(!mover.is_rotating && vars.selecta.wudi.points.selected.includes(data_index)) vars.selecta.wudi.point_select(data_index);
-                // }
-            }
-        }
-
-
-        const lim = [Math.max(...visible.up), Math.min(...visible.down)];
-        lim.push(lim[0]+Math.abs(lim[1]));
-        //console.log("visible.set", visible.set);
-        // obs_handler({LMS: vars.selecta.wudi.points.hover});
-
-        for (let v of visible.set) {
-            //DEBUG /// if (v[0] === 1085) console.log(visible.up[v[2]][0], visible.down[v[2]][0], lim, v[0]);
-            const w_up = apply_adaptive_scale(wudi_up, visible.up[v[2]][0], lim[0], v[0], 1.0, lim[2]);
-            const w_down = apply_adaptive_scale(wudi_down, visible.down[v[2]][0], lim[1], v[0], -1.0, lim[2]);
-
-            if(v[1] === vars.selecta.wudi.points.canonical_selection[0]){
-                wudi_dub_selecta.rescale(v[0],w_up,w_down);
-            } //obs_handler({LIM: v});
-        }
-
-        //obs_handler({LIM: lim});
-
-        wudi_up.instanceMatrix.needsUpdate = true;
-        wudi_up.instanceColor.needsUpdate = true;
-
-        wudi_down.instanceMatrix.needsUpdate = true;
-        wudi_down.instanceColor.needsUpdate = true;
-
-    }
-
-    return true;
-}
-
 
 //general map-sector
 class Sector {
@@ -409,6 +325,7 @@ const layers = {
     },
     make:{
         wudi_points_instance(DATA){
+            const CONF = {};
             const temp_color = new THREE.Color();
             const wudi_group = new THREE.Group();
             wudi_group.name = 'wudi';
@@ -484,6 +401,8 @@ const layers = {
 
             wudi_group.position.set(-model.center.x,-model.center.y,0.0);
             model.container.add(wudi_group);
+
+            //return CONF;
         }
     },
     draw: {
@@ -508,8 +427,9 @@ const layers = {
     },
     update: {
         wudi_points(DATA, cam_obj) {
+            //#// PERVY make based on distance to camera as well.
             const test = layers.wudi_points.children[0].userData.td;
-            const visible = {set: [], up: [], down: []};
+            const visible = {set: [], wudi_up: [], wudi_down: []};
             let in_view_index = 0;
 
             for (let c = 0; c < test.position.length; c++) {
@@ -519,13 +439,15 @@ const layers = {
 
                 if (cam_obj.frustum.containsPoint(layers.u.vct)) {
                     visible.set.push([c, data_index, in_view_index]);
-                    visible.up.push([DATA.TD.current[data_index][3]]);
-                    visible.down.push([DATA.TD.current.current[data_index][4]]);
+                    visible.wudi_up.push([DATA.TD.current[data_index][3]]);
+                    visible.wudi_down.push([DATA.TD.current[data_index][4]]);
                     in_view_index++;
                 }
             }
 
-            const lim = [Math.max(...visible.up), Math.min(...visible.down)];
+            //alert(visible.set.length);
+
+            const lim = [Math.max(...visible.wudi_up), Math.min(...visible.wudi_down)];
             lim.push(lim[0]+Math.abs(lim[1]));
 
             for (let v of visible.set) {
@@ -535,20 +457,20 @@ const layers = {
                     i_mesh.getMatrixAt(v[0], layers.u.mat);
                     layers.u.mat.decompose(layers.u.vct, layers.u.qua, layers.u.vct2);
 
-                    const value = lim[2] === 0 || v === 0 ? (0.0001) : (v / lim[2]*sign);
-                    const color_value = lim[0] === 0 || v === 0 ? (0.0001) : (v / lim[0]*sign);
+                    const wv = visible[i_mesh.name][v[2]][0];
+                    const value = lim[2] === 0 || wv === 0 ? (0.0001) : (wv / lim[2]*sign);
+                    const color_value = lim[0] === 0 || wv === 0 ? (0.0001) : (wv / lim[0]*sign);
 
                     layers.u.vct2.setZ(value * jsConfig.bar_scale);
-                    layers.u.vct2.setY((1 - cam_obj.scale) * jsConfig.bar_scale_width);
+                    layers.u.vct2.setY((1 - cam_obj.camera_scale) * jsConfig.bar_scale_width);
                     layers.u.mat.compose(layers.u.vct, layers.u.qua, layers.u.vct2);
                     i_mesh.setMatrixAt(v[0], layers.u.mat);
 
                     if (!i_mesh.userData.td.color_default[v[0]].selected) {
-                        layers.u.color.fromArray(i_mesh.userData.td.base_color).multiplyScalar(Math.abs(color_value));
+                        layers.u.color.set(i_mesh.userData.td.base_color).multiplyScalar(Math.abs(color_value));
                         i_mesh.setColorAt(v[0], layers.u.color.clone());
                         i_mesh.userData.td.color_default[v[0]].color = layers.u.color.toArray();
                     }
-
                 }
             }
 

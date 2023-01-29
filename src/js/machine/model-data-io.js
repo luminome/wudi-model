@@ -566,6 +566,7 @@ const REQ = {
 export const modelDataIo = {
     model: null,
     graph: null,
+    view: null,
     bytes_loaded_total:0,
     load_segments: {
         total:windowJsConfig.debug ? 3 : 2,
@@ -587,17 +588,17 @@ export const modelDataIo = {
     init_with_data(){
         const message = `${modelDataIo.delta_time.var_name} ${util.formatBytes(modelDataIo.bytes_loaded_total)} ${util.formatMs(modelDataIo.delta_time.stop())}`;
         modelDataIo.init_vars.trace.log(message);
-
         modelDataIo.model.layers.make.wudi_points_instance(DATA);
-
 
         if(windowJsConfig.debug) {
             console.log(DATA.SD);
             console.log(DATA.TD);
             console.log('DATA',DATA);
         }
-        //
-        // DATA.temporal_data_acquire.get_points();
+
+        modelDataIo.view.READY = true;
+        modelDataIo.view.update('initial');
+        return true;
     },
     DATA,
     SELECTOR,

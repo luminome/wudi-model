@@ -3,7 +3,7 @@ import {events as EVT} from "./machine/ui-events";
 import {controls as CTL} from "./machine/ui-controls";
 import {environment as RUN} from "./machine/three-env";
 import {uiCameraDolly as CAM} from "./machine/ui-camera-dolly";
-import {modelDataIo, modelDataIo as DAT} from "./machine/model-data-io";
+import {modelDataIo as DAT} from "./machine/model-data-io";
 import {default as MDL} from "./model.js";
 import graph from "./graph.js";
 
@@ -20,6 +20,7 @@ const display_inline_array = ['none', 'inline-block'];
 const display_array = ['none', 'block'];
 
 const init_vars = {
+    READY: false,
     trace: LOG(obs),
     view:{
         width: window.innerWidth,
@@ -331,6 +332,7 @@ const graph_component = {
 }
 
 const view = {
+    READY: false,
     title_dom: document.getElementById('title'),
     download_output_dom: document.getElementById('output-text'),
     vc: {
@@ -404,7 +406,7 @@ const view = {
 
             init_vars.trace.log('recenter_map', 'ui_control');
 
-            update();
+            view.update();
         },
         camera_behavior(){
             vars.view.camera_auto_affine = !vars.view.camera_auto_affine;
@@ -680,6 +682,7 @@ const view = {
         view.plane = new THREE.Plane(view.UP);
 
         MDL.container.renderOrder = 12;
+
         init_vars.model.add(MDL.container);
 
         if(init_vars.view.features.beautiful_position_lines.on) {
@@ -764,7 +767,7 @@ const view = {
         CTL.v.view.height = view.model_height;
 
 
-        update();
+        view.update();
     },
     set_position_mark(){
         ['x','z','y'].map(a =>{
@@ -797,6 +800,35 @@ const view = {
 
 
 
+    },
+    update(anything=null){
+
+        CTL.cam.run();
+        view.run_optics();
+        view.run_ticks();
+
+        if(CAM.mover.is_moving){
+            init_vars.model.position.copy(CAM.mover.pos).negate();
+        }else{
+            CAM.mover.pos.copy(init_vars.model.position).negate();
+        }
+
+        if(init_vars.view.features.beautiful_position_lines.on) view.set_position_mark();
+
+        if(init_vars.view.features.position_lines.on) RUN.objects.position_lines.position.copy(init_vars.model.position).negate();
+
+        if(init_vars.view.features.tools.on){
+            RUN.objects.tools.mover_marker.position.copy(CAM.mover.pos);
+            view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
+            RUN.objects.tools.set(CAM.mover.pos, view.vc.a);
+        }
+
+        if(view.READY){
+            ///alert(anything+ ' ' +view.READY+ ' ' +DAT.DATA.CONF.wudi_index.length);
+            MDL.layers.update.wudi_points(DAT.DATA, CTL.cam);
+
+        }
+        // return true;
     }
 }
 
@@ -805,27 +837,29 @@ const view = {
 so that the idle from the mover (CAM) can run it per-frame
 instead of only on event-call from drags-lite
 */
-function update(){
-    CTL.cam.run();
-    view.run_optics();
-    view.run_ticks();
-
-    if(CAM.mover.is_moving){
-        init_vars.model.position.copy(CAM.mover.pos).negate();
-    }else{
-        CAM.mover.pos.copy(init_vars.model.position).negate();
-    }
-
-    if(init_vars.view.features.beautiful_position_lines.on) view.set_position_mark();
-    if(init_vars.view.features.position_lines.on) RUN.objects.position_lines.position.copy(init_vars.model.position).negate();
-
-    if(init_vars.view.features.tools.on){
-        RUN.objects.tools.mover_marker.position.copy(CAM.mover.pos);
-        view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
-        RUN.objects.tools.set(CAM.mover.pos, view.vc.a);
-    }
-    return true;
-}
+// function update(){
+//     CTL.cam.run();
+//     view.run_optics();
+//     view.run_ticks();
+//
+//     if(CAM.mover.is_moving){
+//         init_vars.model.position.copy(CAM.mover.pos).negate();
+//     }else{
+//         CAM.mover.pos.copy(init_vars.model.position).negate();
+//     }
+//
+//     if(init_vars.view.features.beautiful_position_lines.on) view.set_position_mark();
+//     if(init_vars.view.features.position_lines.on) RUN.objects.position_lines.position.copy(init_vars.model.position).negate();
+//
+//     if(init_vars.view.features.tools.on){
+//         RUN.objects.tools.mover_marker.position.copy(CAM.mover.pos);
+//         view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
+//         RUN.objects.tools.set(CAM.mover.pos, view.vc.a);
+//     }
+//
+//     if(init_vars.READY) MDL.layers.update.wudi_points(DAT.DATA, CTL.cam);
+//     return true;
+// }
 
 //universal event callback
 function get_evt_data(source){
@@ -833,7 +867,7 @@ function get_evt_data(source){
     if(source === 'screen') {
         CTL.update(EVT.vars.callback[source].meta, init_vars.model);
 
-        if(!CAM.mover.is_moving) update(source);
+        if(!CAM.mover.is_moving) view.update(source);
 
         const m_evt = EVT.vars.callback[source].meta;
         init_vars.trace.watched['screen_meta_action'] = m_evt.action;
@@ -859,9 +893,6 @@ function get_evt_data(source){
             CAM.mover.cancel();
         }
 
-
-
-
         if(init_vars.view.features.grid_marks.on && RUN.objects.hasOwnProperty('grid_marks')){
             const pc = CTL.v.user.mouse.actual;
             const p = init_vars.view.features.grid_marks.pitch;
@@ -869,9 +900,6 @@ function get_evt_data(source){
             const y = Math.round(pc.z/p)*p;
             RUN.objects.grid_marks.position.set(-x, 0.0, -y);
         }
-
-
-
         // view.run_optics();
         // view.run_ticks();
     }
@@ -908,9 +936,18 @@ init_vars.trace.log('components loaded', 'ok');
 window.addEventListener('DOMContentLoaded', (event) => {
     console.log('model-base loaded. continuing');
     init_vars.trace.log(runtime_timer.var_name, util.formatMs(runtime_timer.stop()));
+
+
+    //#//MAP INIT PROBLEM
     MDL.init(init_vars);
-    DAT.init(MDL, view, graph_component, init_vars);
+
     view.init();
+
     //initialize CAM, aka ui-camera-dolly with the view loaded=in (initialized).
-    CAM.init(init_vars.model, CTL.cam, update);
+    CAM.init(init_vars.model, CTL.cam, view.update);
+    DAT.init(MDL, view, graph_component, init_vars);
+
+    CTL.update(EVT.vars.callback['screen'].meta, init_vars.model);
+    // CTL.cam.run();
+    //view.update('source');
 });

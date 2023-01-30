@@ -1,4 +1,5 @@
 const windowJsConfig = {
+    debug: true,
     colors: {
         down_welling:'#0000FF',
         up_welling:'#FF0000',
@@ -20,7 +21,6 @@ const windowJsConfig = {
             select: [0x660066, 0xFF00FF]
         }
     },
-    debug: true,
     bounds_bottom_offset: 20,
     graph_obj_height: 120,
     dom_references:{

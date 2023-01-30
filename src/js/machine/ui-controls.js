@@ -27,7 +27,7 @@ const cam = {
     min_zoom: 0.25,
     max_zoom: null,
     scale: 1.0,
-    camera_scale: 0.0,
+    camera_scale: 1.0,
     frustum: new THREE.Frustum(),
     frustum_mat: new THREE.Matrix4(),
     direction: new THREE.Vector3(0, 0, 0),
@@ -44,7 +44,6 @@ const cam = {
         cam.cube.updateMatrix();
         cam.cube.updateMatrixWorld();
         cam.cube.userData.originalMatrix = cam.cube.matrix.clone();
-        //cam.run();
     },
     run() {
         cam.util_v.copy(cam.base_pos).applyQuaternion(cam.cube.quaternion);
@@ -79,11 +78,13 @@ const cam = {
 export const controls = {
     ray_caster: new THREE.Raycaster(),
     cam: null,
+    interact_type: null,
     v:{
         user:{
             mouse:{
                 state: null,
                 raw: new THREE.Vector3(0, 0, 0),
+                screen: new THREE.Vector2(0, 0),
                 plane_pos: new THREE.Vector3(0, 0, 0),
                 last_down: new THREE.Vector3(0, 0, 0),
                 new_down: new THREE.Vector3(0, 0, 0),
@@ -104,16 +105,18 @@ export const controls = {
         controls.cam = cam;
         controls.cam.init();
         controls.ray_caster.params = {
-            Line: {threshold: 1},
+            Line: {threshold: 0.01},
             Points: {threshold: 3.0},
         }
         controls.v.plane = new THREE.Plane(y_up);
     },
     update(e_meta, model){
+        controls.interact_type = e_meta.interact_type;
         controls.v.user.mouse.state = e_meta.action;
         controls.v.user.mouse.raw.x = (e_meta.pos_x / controls.v.view.width) * 2 - 1;
         controls.v.user.mouse.raw.y = -(e_meta.pos_y / controls.v.view.height) * 2 + 1;
         controls.v.user.mouse.raw.z = 0.0;
+        controls.v.user.mouse.screen.set(e_meta.pos_x, e_meta.pos_y);//.z = 0.0;
         controls.ray_caster.setFromCamera(controls.v.user.mouse.raw, controls.cam.camera);
         controls.ray_caster.ray.intersectPlane(controls.v.plane, controls.v.user.mouse.plane_pos);
 

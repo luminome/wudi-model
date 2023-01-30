@@ -235,3 +235,30 @@ export const to_lexical_range = (numbers, months_str, type=null) => {
 		}
     }).reverse();
 }
+
+export const find_scale = (data, index) => {
+    const group = data.reduce((sv, e, i) => {
+        if (i > 0 && e[index] !== null) {
+            sv[0].push(e[index]);
+            sv[1] += e[index];
+        }
+        return sv;
+    }, [[], 0.0]);
+
+    return {
+        'max':Math.max(...group[0]),
+        'min':Math.min(...group[0]),
+        'avg':group[1] / group[0].length
+    }
+}
+
+export const norm_val = (val, mi, ma) => (val - mi) / (ma - mi);
+
+export const r_sum = (arr, modu, s = 0) => {
+    for (let i = 0; i < arr.length; i++) s += arr[i];
+    return Math.round(s / modu);
+}
+
+export const title_case = (str) => {
+  return str.toLowerCase().replace(/(^|\s)\S/g, s => s.toUpperCase());
+}

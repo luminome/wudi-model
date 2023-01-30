@@ -54,7 +54,8 @@ function init(){
     environment.dom.appendChild(renderer.domElement);
     environment.vars.dom = renderer.domElement;
     scene.add(environment.vars.model);
-    environment.controls.cam.run();
+    //environment.vars.model.updateMatrixWorld();
+    //environment.controls.cam.run();
 }
 
 function post_init() {
@@ -140,39 +141,60 @@ function post_init() {
             const axis_line_group = new THREE.Group();
             //const segments = [];
 
-            const ralph = new THREE.Quaternion();
-            const rad = ref.weight*0.01;
-            const vu = new THREE.Vector3();
+            const vertices = [
+                -1,0,0,
+                1,0,0,
+                0,0,-1,
+                0,0,1,
+            ]
 
-            for (let n = 0; n < 3; n++) {
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array(vertices), 3 ) );
+            geometry.scale(20, 20, 20);
 
-                const r = [0, 0, 0];
-                r[2 - n] = 1.0;
+            const line = new THREE.LineSegments( geometry, material );
+            axis_line_group.add(line);
 
-                vu.fromArray(r);
-                const c = n === 0 ? 2 : -2;
-                ralph.setFromAxisAngle(vu, Math.PI / c);
+            //
+            // const ralph = new THREE.Quaternion();
+            // const rad = ref.weight*0.01;
+            // const vu = new THREE.Vector3();
+            //
+            // for (let n = 0; n < 3; n++) {
+            //
+            //     const r = [0, 0, 0];
+            //     r[2 - n] = 1.0;
+            //
+            //     vu.fromArray(r);
+            //     const c = n === 0 ? 2 : -2;
+            //     ralph.setFromAxisAngle(vu, Math.PI / c);
+            //
+            //     const geometry = new THREE.CylinderGeometry(rad, rad, ref.size, 16);
+            //     geometry.translate(0, ref.size / 2, 0);
+            //     geometry.applyQuaternion(ralph);
+            //     const neg = new THREE.Mesh(geometry, material);
+            //
+            //     const n_geometry = geometry.clone();
+            //     if (n === 1) {
+            //         n_geometry.rotateX(Math.PI);
+            //     } else {
+            //         ralph.setFromAxisAngle(vu, Math.PI);
+            //         n_geometry.applyQuaternion(ralph);
+            //     }
+            //
+            //     const pos = new THREE.Mesh(n_geometry, material);
+            //
+            //     //segments.push(n === 1 ? [pos, neg] : [neg, pos]);
+            //
+            //     axis_line_group.add(neg);
+            //     axis_line_group.add(pos);
+            // }
 
-                const geometry = new THREE.CylinderGeometry(rad, rad, ref.size, 16);
-                geometry.translate(0, ref.size / 2, 0);
-                geometry.applyQuaternion(ralph);
-                const neg = new THREE.Mesh(geometry, material);
-
-                const n_geometry = geometry.clone();
-                if (n === 1) {
-                    n_geometry.rotateX(Math.PI);
-                } else {
-                    ralph.setFromAxisAngle(vu, Math.PI);
-                    n_geometry.applyQuaternion(ralph);
-                }
-
-                const pos = new THREE.Mesh(n_geometry, material);
-
-                //segments.push(n === 1 ? [pos, neg] : [neg, pos]);
-
-                axis_line_group.add(neg);
-                axis_line_group.add(pos);
-            }
+            // const material = new THREE.LineBasicMaterial({color: 0xFFFFFF});
+            // const geometry = new THREE.BufferGeometry();
+            // geometry.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array(vertices), 3 ) );
+            //
+            // const line = new THREE.LineSegments( geometry, material );
 
             axis_line_group.renderOrder = 10;
 

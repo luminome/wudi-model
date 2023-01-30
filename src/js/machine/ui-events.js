@@ -1,7 +1,6 @@
 import {dragControls} from './drags-lite-beta.js';
 import {keyControls} from './drags-lite-keys-beta.js';
 
-
 const evt_reactivity = 200;
 const touch = {
     x: null,
@@ -50,6 +49,7 @@ function screen_event(type, o){
     m.meta.pos_x = false;
     m.meta.pos_y = false;
     m.meta.action = false;
+    m.meta.interact_type = m.pointer.event_type;
 
     if (m.pointer.event_type === 'touch') {
         m.meta.action = m.pointer.action;

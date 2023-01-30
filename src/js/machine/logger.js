@@ -56,7 +56,7 @@ export const logger = (target) => {
         L.log_time = new Date() - L.start_time;
         const output = [`${nice_time(L.log_time)}`];
         get_lex(output, arguments);
-        L.stack.push(output);
+        L.stack.unshift(output);
         if(L.callback) L.callback();
     }
 

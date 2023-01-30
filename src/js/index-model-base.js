@@ -5,6 +5,8 @@ import {environment as RUN} from "./machine/three-env";
 import {uiCameraDolly as CAM} from "./machine/ui-camera-dolly";
 import {modelDataIo as DAT} from "./machine/model-data-io";
 import {default as MDL} from "./model.js";
+import {default as MAP} from "./map.js";
+
 import graph from "./graph.js";
 
 import {logger as LOG} from "./machine/logger.js";
@@ -43,17 +45,17 @@ const init_vars = {
                 width: 25,
                 pitch: 2.0,
                 shape_length: 10.0,
-                shape_scale: 0.01,
+                shape_scale: 0.005,
                 color: windowJsConfig.colors.view_elements,
             },
             center_line:{
-                on: true,
+                on: false,
             },
             tools:{
-                on: true,
+                on: false,
             },
             position_lines:{
-                on: true,
+                on: false,
             },
             beautiful_position_lines:{
                 on: true,
@@ -61,7 +63,7 @@ const init_vars = {
                 weight: 1,
                 color: windowJsConfig.colors.view_elements,
                 opacity: 0.5,
-                limit: 60.0
+                limit: 30.0
             }
         }
     },
@@ -246,6 +248,7 @@ const graph_component = {
                 for (let p of DAT.SELECTOR.point.data.selected) {
                     const time_slot = `${p}-${t}`;
                     const reference = DAT.DATA.TD.point_cache[time_slot];
+                    console.log(time_slot, DAT.DATA.TD.point_cache);
 
                     ref_style = reference.style;
 
@@ -284,7 +287,7 @@ const graph_component = {
                 cache_for_output.push({id:'AVG', tid:0, ref_data:{data:r_dat, id:'all'}, style:ref_style});
             }
 
-            download_component.output(cache_for_output);
+            //download_component.output(cache_for_output);
 
             const up_col = windowJsConfig.colors.up_welling;//utility_color.fromArray(vars.colors.upwelling).getHex();
             const dn_col = windowJsConfig.colors.down_welling;//utility_color.fromArray(vars.colors.downwelling).getHex();
@@ -457,6 +460,140 @@ const view = {
                 }
             }
         }
+    },
+    ui_info:{
+        lock_position: new THREE.Vector3(),
+        target_lock:false,
+        world_position: new THREE.Vector3(),
+        screen_position: {
+            a: new THREE.Vector2(),
+            b: new THREE.Vector2(),
+        },
+        dom_element: null,
+        text: 'null',
+        rect: null,
+        init() {
+            this.dom_element = document.getElementById('info-field');
+            this.display_element = this.dom_element.querySelector('.info-body');
+            this.temp_element = this.dom_element.querySelector('.info-temp');
+            this.dom_element.querySelector('.info-head').innerHTML = this.text.toString();
+            this.dom_element.style.backgroundColor = windowJsConfig.colors.window_overlay;
+            this.dom_element.classList.remove('hidden');
+            this.rect = this.dom_element.getBoundingClientRect();
+        },
+        hover(e) {
+            this.style.color = '#FFFFFF';
+        },
+        set_label_color(c) {
+            this.dom_element.style.color = c;
+        },
+        set_position(x, y, style = 'area') {
+            if (style === 'area') {
+                const nx = (view.model_width / 2) - x;
+                const ny = (view.model_height / 2) - y;
+                const mod = 0.8;
+                const x_offset = (Math.abs(nx) > (view.model_width / 2) * mod) ? ((view.model_width / 2) / Math.abs(nx)) * mod : 1;
+                const y_offset = (Math.abs(ny) > (view.model_height / 2) * mod) ? ((view.model_height / 2) / Math.abs(ny)) * mod : 1;
+
+                if (x_offset !== 1 || y_offset !== 1) {
+                    this.screen_position.a.set((view.model_width / 2) - (nx * x_offset), (view.model_height / 2) - (ny * y_offset));
+                } else {
+                    this.screen_position.a.set(x, y);
+                }
+            } else {
+                //default to right center of mouse
+                //const pos_x = this.rect.width
+                if(this.target_lock){
+                    this.dom_element.style['pointer-events'] = 'all';
+                    this.dom_element.classList.add('select');
+                    x = this.lock_position.x;
+                    y = this.lock_position.y;
+                }else{
+                    this.dom_element.classList.remove('select');
+                    this.dom_element.style['pointer-events'] = 'none';
+                }
+                let px, py;
+                const offset = 10;
+                if(y - (this.rect.height / 2) < 0){
+                    //too far up
+                    px = x;
+                    py =  y + (this.rect.height / 2) + offset;
+                }else if (y + (this.rect.height / 2) > view.model_height) {
+                    //too far down
+                    px = x;
+                    py = y - (this.rect.height / 2) - offset;
+                }else if (x + this.rect.width + offset > view.model_width) {
+                    //too far right
+                    px = x - (this.rect.width / 2) - offset;
+                    py = y;
+                }else{
+                    px = x + (this.rect.width / 2) + offset;
+                    py = y;
+                }
+
+                this.screen_position.a.set(px,py);
+                this.screen_position.b.set(px,py);
+
+            }
+            // this.dom_element.style.left = (this.screen_position.a.x - (this.rect.width / 2)).toFixed(2) + 'px';
+            // this.dom_element.style.top = (this.screen_position.a.y - (this.rect.height / 2)).toFixed(2) + 'px';
+
+        },
+        drag_position(delta_x, delta_y) {
+            view.vc.a.set(delta_x, delta_y, 0.0);
+            this.screen_position.a.x += view.vc.a.x;
+            this.screen_position.a.y += view.vc.a.y;
+            // this.dom_element.style.left = (this.screen_position.a.x - (this.rect.width / 2)).toFixed(2) + 'px';
+            // this.dom_element.style.top = (this.screen_position.a.y - (this.rect.height / 2)).toFixed(2) + 'px';
+            this.screen_position.b.copy(this.screen_position.a);
+        },
+        set_state(bool) {
+            this.dom_element.style.display = bool ? 'block' : 'none';
+        },
+        set_text(text_dict, mode = null) {
+            this.display_element.innerHTML = '';
+            for (let d of text_dict) {
+                const part = this.temp_element.cloneNode(true);
+                part.classList.remove('info-temp');
+                if(d.hasOwnProperty('table')){
+                    part.querySelector('.info-head').innerHTML = d.head;
+                    part.querySelector('.info-text').classList.add('info-table');
+                    d.table.map(r => {
+                        const row = document.createElement('div');
+                        r.map(tx => {
+                            const txt_div = document.createElement('div');
+                            txt_div.className = 'info-cell';
+                            txt_div.innerHTML = `<span>${tx}</span>`;
+                            row.appendChild(txt_div);
+                        });
+                        row.className = 'info-row';
+                        part.querySelector('.info-text').appendChild(row);
+                    })
+                }else{
+                    [['.info-head', d.head], ['.info-text', d.hasOwnProperty('text') ? d.text : null]].forEach(t => {
+                        if (t[1]) part.querySelector(t[0]).innerHTML = Array.isArray(t[1]) ? t[1].map(t_l => {
+                            return `<span>${t_l}</span>`
+                        }).join(''): t[1].toString();
+                        part.querySelector(t[0]).style.display = t[1] ? 'block' : 'none';
+                    });
+                }
+                this.display_element.appendChild(part);
+            }
+            this.rect = this.dom_element.getBoundingClientRect();
+        },
+        update_position() {
+            // if(this.target_lock){
+            //     vu.copy(this.lock_position);
+            //     projected(vu);
+            //     this.screen_position.a.set(vu.x,vu.y);
+            // }
+
+            //this.screen_position.b.lerp(this.screen_position.a, 0.3);
+            this.dom_element.style.left = (this.screen_position.b.x - (this.rect.width / 2)).toFixed(2) + 'px';
+            this.dom_element.style.top = (this.screen_position.b.y - (this.rect.height / 2)).toFixed(2) + 'px';
+        },
+
+
     },
     make_position_mark(radius) {
         const curve = new THREE.EllipseCurve(
@@ -644,8 +781,6 @@ const view = {
             }
         });
 
-
-
         const buttons = [...document.querySelectorAll(".button-check-box")];
         buttons.map(b => {
             b.parentNode.addEventListener('mouseup', view.ui_control.button_check_box.click);
@@ -681,9 +816,11 @@ const view = {
 
         view.plane = new THREE.Plane(view.UP);
 
-        MDL.container.renderOrder = 12;
+        //MDL.container.renderOrder = 12;
 
         init_vars.model.add(MDL.container);
+        init_vars.model.position.set(0,0,0);
+        init_vars.model.updateMatrix();
 
         if(init_vars.view.features.beautiful_position_lines.on) {
             ['x','z','y'].map(a =>{
@@ -699,6 +836,14 @@ const view = {
 
         obs.style.color = windowJsConfig.colors.view_elements;
         obs.style['background-color'] = windowJsConfig.colors.window_overlay;
+
+        obs.onscroll = (event) => {
+            event.preventDefault();
+            //alert('ok');
+        }
+        //obs.addEventListener('scroll', g_obs);
+
+        view.ui_info.init();
     },
     redraw(){
         const bounds = document.getElementById('bounds');
@@ -824,47 +969,262 @@ const view = {
         }
 
         if(view.READY){
-            ///alert(anything+ ' ' +view.READY+ ' ' +DAT.DATA.CONF.wudi_index.length);
             MDL.layers.update.wudi_points(DAT.DATA, CTL.cam);
-
+            MDL.layers.update.places(CTL.cam);
+            //MDL.layers.update.protected_areas(CTL.cam);
+            MAP.update(CTL.cam, CTL.v.user.mouse.plane_pos);
+            view.ui_info.update_position();
         }
+
+
         // return true;
+    },
+    post_init(){
+        view.READY = true;
+
+        MDL.layers.make.places(DAT.DATA);
+        MDL.layers.make.iso_bath(DAT.DATA);
+        //MDL.layers.make.protected_areas(DAT.DATA);
+        MDL.layers.make.wudi_points_instance(DAT.DATA);
+
+        MAP.protected_areas = DAT.DATA.SD.protected_areas;
+        MAP.init(MDL);
+
+        init_vars.trace.log("post_initialization", CTL.cam.camera_scale);
+
+        view.update();
     }
 }
 
-//attempt to globalize the general update of things...
-/*
-so that the idle from the mover (CAM) can run it per-frame
-instead of only on event-call from drags-lite
-*/
-// function update(){
-//     CTL.cam.run();
-//     view.run_optics();
-//     view.run_ticks();
-//
-//     if(CAM.mover.is_moving){
-//         init_vars.model.position.copy(CAM.mover.pos).negate();
-//     }else{
-//         CAM.mover.pos.copy(init_vars.model.position).negate();
-//     }
-//
-//     if(init_vars.view.features.beautiful_position_lines.on) view.set_position_mark();
-//     if(init_vars.view.features.position_lines.on) RUN.objects.position_lines.position.copy(init_vars.model.position).negate();
-//
-//     if(init_vars.view.features.tools.on){
-//         RUN.objects.tools.mover_marker.position.copy(CAM.mover.pos);
-//         view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
-//         RUN.objects.tools.set(CAM.mover.pos, view.vc.a);
-//     }
-//
-//     if(init_vars.READY) MDL.layers.update.wudi_points(DAT.DATA, CTL.cam);
-//     return true;
-// }
+const interactive = {
+    element_info_filter_secondary: {
+        mpa_s: (index = null) => {
+            const ref = vars.refs.mpa_s[parseInt(index)];
+            const readable = vars.keys_table.mpa_s(ref);
+            return {
+                head: ref.NAME,
+                table: Object.entries(readable).filter(m => m[1] !== null),
+            }
+        },
+        places: (index = null) => {
+            const ref = vars.refs.places[parseInt(index)];
+            const ref_geo = vars.refs.geonames[ref.geo] !== undefined ? vars.refs.geonames[ref.geo].GEONAME : null;
+            const readable = vars.keys_table.places(ref, ref_geo);
+            return {
+                head: ref.name,
+                table: Object.entries(readable).filter(m => m[1] !== null),
+            }
+        }
+    },
+    element_info_filter: {
+        plane_line: (index = null) => {
+            const sector = map_sectors_group.children[index].userData.owner;
+            // const plane = scene.getObjectByName('plane_line-' + index);
+            // const ske = plane.parent.userData.owner;
+            if(vars.DEBUG){
+                return {
+                    text: sector.test_validate(), ///['plane' + index, plane.userData.level, plane.userData.aux],
+                    index: index,
+                    name: 'plane_line'+'-'+index
+                }
+            }else{
+                return null;
+            }
+
+        },
+        protected_areas: (index = null) => {
+            const pro_area = DAT.DATA.SD.protected_areas[index];
+            const name = Array.isArray(pro_area.NAME) ? pro_area.NAME : util.title_case(pro_area.NAME);
+            return {
+                head: name,
+                text: [pro_area.COUNTRY, pro_area.STATUS_ENG+'—'+pro_area.STATUS_YR, pro_area.DESIG_ENG],
+                index: index,
+                name: 'protected_areas'+'-'+index,
+                area: pro_area.REP_AREA ? pro_area.REP_AREA : 0,
+                type: 'protected_areas'
+            }
+        },
+        iso_bath: (index = null) => {
+            return {
+                text: 'isobath 100m',  // + index,
+                index: index,
+                name: 'isobath'+'-'+index,
+                area: 10000000,
+                type: 'isobath'
+            }
+        },
+        wudi_point: (index = null) => {
+            const data_index = DAT.DATA.CONF.wudi_index[index];
+            const wudi_point = DAT.DATA.SD.wudi_points[index];//.slice(6,8);
+            //DAT.SELECTOR.point.select(data_index);
+
+            const times_list = DAT.SELECTOR.time.data.selected.length === 0 ? ['all'] : DAT.SELECTOR.time.data.selected;
+            const stats = {'times': times_list, 'days': [], 'up': [], 'down': [], 'events': []};
+            const labels = [`(${DAT.DATA.SD.geonames[wudi_point.geo-1].GEONAME})`, view.title_dom.innerHTML];
+
+            for (let d of times_list) {
+                const data_point = DAT.DATA.TD[d].data[data_index];
+
+                stats.days.push(DAT.DATA.TD[d].meta.siz);
+                stats.up.push(data_point[0]);
+                stats.down.push(Math.abs(data_point[1]));
+                stats.events.push(data_point[2])
+            }
+
+            for(let u of jsConfig.wudi_type_array){
+                const col = windowJsConfig.colors[u.item];
+                const stat = util.r_sum(stats[u.label], stats.times.length);
+                labels.push(`<span style="font-family:heavy_data_bold, sans-serif; color:${col}">${stat} ${u.label}-days</span>`);
+            }
+
+            labels.push(`${util.r_sum(stats.days, stats.times.length)} days`);
+
+            return {
+                head: 'Nº'+data_index,
+                text: labels,
+                index: index,
+                name: 'wudi_points'+'-'+index,
+                area: 0,
+                type: 'wudi_points'
+            }
+        },
+        places: (index = null) => {
+            //console.log('place',index);
+
+            const place = DAT.DATA.SD.places[index];
+            const place_name = Array.isArray(place.name) ? util.title_case(place.name[0]) : util.title_case(place.name);
+            const place_geo = DAT.DATA.SD.geonames[place.geo-1].GEONAME || null;
+            const region_labels = Array.isArray(place.regionLabels) ? place.regionLabels[0] : place.regionLabels;
+
+            const ref_data = [place.countryLabel];
+            ref_data.push(region_labels);
+            ref_data.push(`${place.type} pop. ${place.population}`);
+            ref_data.push(place_geo);
+
+            return {
+                head: place_name,
+                text: ref_data.filter(m => m !== null),
+                index: index,
+                name: 'places'+'-'+index,
+                area: place.area ? place.area : 0,
+                type: 'places'
+            }
+        }
+    },
+    hash: [],
+    hash_objects: [],
+    hash_info_store: {},
+    hash_changed: false,
+    hash_priority:{
+        wudi_point: 10,
+        places: 9,
+        protected_areas: 8,
+        iso_bath: 0,
+        plane_line: 0,
+
+    },
+    clean(intersects) {
+        interactive.hash_changed = false;
+        const hash = [];
+        const limits = [];
+        let wudi_polled = false;
+        for(let i = 0; i < intersects.length; i++){
+            const I = intersects[i].object;
+            if (I.interactive) {
+                if (I.type === 'Line' && limits.includes(I.uuid)) continue;
+                if (!limits.includes(I.uuid)) limits.push(I.uuid);
+                let cat_name = I.name;
+                let index = intersects[i].instanceId ? intersects[i].instanceId : null;
+                let is_wudi = false;
+                let natural_name = `${cat_name}-${index}`;
+
+
+                if (cat_name === 'wudi_up' || cat_name === 'wudi_down') {
+                    is_wudi = true;
+                    cat_name = 'wudi_point';
+                    natural_name = `wudi_point-${intersects[i].instanceId}`;
+                }
+
+                if (cat_name.indexOf('protected_areas') !== -1) {
+                    cat_name = 'protected_areas';
+                    index = I.userData.id || intersects[i].instanceId;
+                    natural_name = `protected_areas-${index}`;
+                }
+
+                if(( is_wudi && !wudi_polled ) || !is_wudi) {
+                    if (!hash.includes(natural_name)) hash.push(natural_name);
+                    if (!interactive.hash_info_store.hasOwnProperty(natural_name)){
+                        interactive.hash_info_store[natural_name] = {
+                            cat:cat_name,
+                            obj:I,
+                            index:index,
+                            priority: interactive.hash_priority[cat_name]
+                        };
+                    }
+                }
+
+                if(cat_name === 'wudi_point') wudi_polled = true;
+            }
+        }
+
+        interactive.hash.map((h, i) =>{
+            if(!hash.includes(h)){
+                interactive.hash_changed = true;
+                interactive.hash.splice(i, 1);
+            }
+        });
+
+        hash.map((h, i) =>{
+            if(!interactive.hash.includes(h)){
+                interactive.hash_changed = true;
+                interactive.hash.push(h);
+            }
+        });
+    },
+    check() {
+        CTL.ray_caster.setFromCamera(CTL.v.user.mouse.raw, CTL.cam.camera);
+        const intersects = CTL.ray_caster.intersectObjects(MDL.container.children);
+        interactive.clean(intersects);
+
+        if(interactive.hash_changed){
+            interactive.hash_objects = interactive.hash.map(h => {return interactive.hash_info_store[h]});
+            interactive.hash_objects.sort((a, b) => a.priority > b.priority ? -1 : 1);
+
+            const ui_info_text = [];
+            interactive.hash_objects.map(h =>{
+                ui_info_text.push(interactive.element_info_filter[h.cat](h.index));
+            });
+
+            init_vars.trace.watched['interactive'] = interactive.hash;
+            view.ui_info.set_state(true);
+            view.ui_info.set_text(ui_info_text);
+            view.ui_info.set_position(CTL.v.user.mouse.screen.x, CTL.v.user.mouse.screen.y, 'mouse');
+        }
+
+        const m_evt = EVT.vars.callback['screen'].meta;
+
+        if(m_evt.action === 'click'){
+            const top_element = interactive.hash_objects[0];
+            if(top_element.cat === 'wudi_point'){
+                const data_index = DAT.DATA.CONF.wudi_index[top_element.index];
+                DAT.SELECTOR.point.select(data_index);
+            }
+        }
+
+        if(intersects.length === 0) {
+            view.ui_info.set_state(false);
+            delete(init_vars.trace.watched.interactive);
+            return false;
+        }
+
+    }
+}
 
 //universal event callback
 function get_evt_data(source){
-    // console.log(source, EVT.vars.callback[source]);
     if(source === 'screen') {
+        interactive.check();
+
         CTL.update(EVT.vars.callback[source].meta, init_vars.model);
 
         if(!CAM.mover.is_moving) view.update(source);
@@ -883,7 +1243,7 @@ function get_evt_data(source){
 
         if(m_evt.action === 'click'){
             const d = CTL.cam.max_zoom - (view.vc.a.length()/2);
-            init_vars.trace.log('click', d.toFixed(2));
+            init_vars.trace.log('click', d.toFixed(2), CTL.interact_type);
             CAM.mover.set_target(CAM.mover.pos, view.vc.a, d);
             view.vc.c.subVectors(view.vc.a, CAM.mover.pos);
             CAM.mover.set_rotation_target(view.vc.c);
@@ -900,8 +1260,6 @@ function get_evt_data(source){
             const y = Math.round(pc.z/p)*p;
             RUN.objects.grid_marks.position.set(-x, 0.0, -y);
         }
-        // view.run_optics();
-        // view.run_ticks();
     }
     if(source === 'keys') {
         if(EVT.vars.callback[source].active.includes('KeyQ')){
@@ -923,31 +1281,33 @@ function log_state(){
         });
     }
 }
-
 init_vars.trace.callback = log_state;
 
-CTL.init(init_vars); //init scene controls
-RUN.init(document.getElementById('model'), CTL, init_vars); //init three js environment (sets init_vars.dom);
-EVT.init(init_vars.dom); //init events handler
+//init scene controls
+CTL.init(init_vars);
+//init three js environment (sets init_vars.dom);
+RUN.init(document.getElementById('model'), CTL, init_vars);
+//init events handler
+EVT.init(init_vars.dom);
 EVT.vars.callback.update_function = get_evt_data;
 
 init_vars.trace.log('components loaded', 'ok');
 
 window.addEventListener('DOMContentLoaded', (event) => {
-    console.log('model-base loaded. continuing');
+    //console.log('model-base loaded. continuing');
     init_vars.trace.log(runtime_timer.var_name, util.formatMs(runtime_timer.stop()));
-
 
     //#//MAP INIT PROBLEM
     MDL.init(init_vars);
 
+
     view.init();
 
     //initialize CAM, aka ui-camera-dolly with the view loaded=in (initialized).
-    CAM.init(init_vars.model, CTL.cam, view.update);
-    DAT.init(MDL, view, graph_component, init_vars);
-
-    CTL.update(EVT.vars.callback['screen'].meta, init_vars.model);
+    //CAM.init(init_vars.model, CTL.cam, view.update);
+    const DAT_INIT = DAT.init(MDL, view, graph_component, init_vars);
+    console.log(DAT_INIT);
+    //CTL.update(EVT.vars.callback['screen'].meta, init_vars.model);
     // CTL.cam.run();
     //view.update('source');
 });

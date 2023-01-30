@@ -50,8 +50,8 @@ const jsConfig = {
             }
         }
     },
-    DEBUG: false,
     levels: 4,
+    depth_max: 5000.0,
     assets:{
         test:{
             name: 'debug_test_data',
@@ -60,8 +60,8 @@ const jsConfig = {
         database:{
             name: 'database_queries',
             list: [
-                {"url": "/map", "table": "places_test", "type": "json-ser", "name": "places_data", "style":"point", "tck": [0, 0, 0], "geom_index": 11},
-                {"url": "/map", "table": "protected_regions", "type": "json-ser", "name": "mpa_s", "style":"point", "tck": [0, 0, 0]},
+                {"url": "/map", "table": "places_test", "type": "json-ser", "name": "places", "style":"point", "tck": [0, 0, 0], "geom_index": 11},
+                {"url": "/map", "table": "protected_regions", "type": "json-ser", "name": "protected_areas", "style":"point", "tck": [0, 0, 0]},
                 {"url": "/wudi", "table": "turn_table", "type": "json-ser", "name": "wudi_points", "tck": [0, 0, 0]},
                 {"url": "/wudi", "table": "assoc", "type": "json-ser", "name": "wudi_assoc", "tck": [0, 0, 0]},
                 {"url": "/wudi", "tim": "40", "type": "json-ser", "name": "wudi_temporal_data", "tck": [0, 0, 40]},
@@ -77,6 +77,7 @@ const jsConfig = {
         }
     },
     graph_styles: {3:'all', 4:'year', 6:'month', 8:'daily'},
+    wudi_type_array: [{item:'up_welling',label:'up'}, {item:'down_welling',label:'down'}],
     wudi_selecta_stem_pixels: 50,
 	bar_scale: 0.2,
 	bar_scale_width: 0.5,
@@ -84,6 +85,17 @@ const jsConfig = {
 	wudi_point_scale: 0.005,
 	wudi_UPWthr: 0.4325,
 	wudi_DNWthr: -0.3905,
+    show_ground_plane_box: false,
+    iso_bath_opacity: 0.5,
+    bounds: [-7.0, 29.0, 37.0, 49.0],
+    sector_degree_scale: 2.0,
+    degree_scale_str: 'deg_2',
+    static_path: "/data",
+    map_sectors_layers: {
+        draw: true,
+        allow: ['polygons', 'line_strings', 'contours', 'mpa_s']
+    },
+    MAP_DEBUG: false,
 }
 
 export default jsConfig

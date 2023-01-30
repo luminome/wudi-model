@@ -237,7 +237,7 @@ const page = {
         });
     },
     scroll(evt){
-        evt.preventDefault();
+        //evt.preventDefault();
         const h_state = window.scrollY > 0;
         page.interaction_state = h_state;
         page.handle_icon_update(h_state);

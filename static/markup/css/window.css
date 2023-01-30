@@ -535,6 +535,9 @@ a.darklink:visited{
 	margin-right:4px;
 	display:block;
 	white-space: pre-line;
+	overflow-y: scroll;
+	pointer-events: all;
+	max-height: 90vh;
 	/*z-index: 2;*/
 }
 
@@ -558,7 +561,7 @@ a.darklink:visited{
 	border-radius: 4px;
 	width: fit-content;
 	block-size: fit-content;
-	/*z-index: 20;*/
+	/*z-index: -20;*/
 }
 
 .info-style.select{

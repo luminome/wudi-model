@@ -6,11 +6,9 @@ import timer from "./timer";
 
 const DATA = {
     temporal_data_process:{
-        average() {
+        average(caller = null) {
             const points_count = DATA.TD.points_count;///vars.data.wudi_data.points_count;
             const times_count = SELECTOR.time.data.selected.length;//vars.selecta.wudi.times.selected.length;
-
-            console.log(SELECTOR.time.data.selected);
 
             const new_normals = []; //averaged normals values for all points
             const new_aggregated = []; //combined up/down values for all points
@@ -27,7 +25,6 @@ const DATA = {
 
             for (let t = 0; t < times_list.length; t++) {
                 const tn = times_list[t].toString();
-                console.log('red', tn);
                 const data = DATA.TD[tn].data;
                 const meta = DATA.TD[tn].meta;
 
@@ -59,12 +56,16 @@ const DATA = {
 
             DATA.TD.current = new_normals;
             DATA.TD.aggregate = new_aggregated;
+
+            modelDataIo.init_vars.trace.log('temporal_data_process recalculated', caller);
         }
     },
     temporal_data_acquire:{
         get(){
             if(SELECTOR.time.data.required.length === 0){
                 if(modelDataIo.graph.active) modelDataIo.graph.run();
+                DATA.temporal_data_process.average('temporal_data_acquire get');
+                modelDataIo.view.update();
                 return;
             }
 
@@ -86,7 +87,8 @@ const DATA = {
                 DATA.TD[time_slot] = {'data': data, 'meta': obj.raw.meta};
             });
             //run averager here:
-            DATA.temporal_data_process.average();
+            DATA.temporal_data_process.average('temporal_data_acquire set');
+            modelDataIo.view.update();
         },
         get_points(){
             const post_obj = {
@@ -117,11 +119,17 @@ const DATA = {
             } else {
                 //proceed directly to graph because the points are loaded.
                 //wudi_graph_chart_daily();
+                DATA.temporal_data_process.average('temporal_data_acquire set');
+                modelDataIo.view.update();
                 modelDataIo.graph.run();
             }
 
         },
         set_points(result_obj){
+            //#// ex chunks : there's an issue with completion here...
+            console.log(result_obj);
+            //alert(result_obj.special.length);
+
             const request_length = result_obj.special.length; ///number of points per time.
             const asset_raw_length = result_obj.raw.data.length;
             const general_length = asset_raw_length / request_length;
@@ -234,132 +242,10 @@ const SELECTOR = {
 
             SELECTOR.time.update_selection();
 
-
-            //
-            // SELECTOR.time.data.required = [];
-            // const all_selector = document.querySelector(`.time-element[data-type=${element.dataset.type}][data-date="all"]`);
-            // const target = document.getElementById(element.dataset.type + '_container');
-            // const validator = [];
-            //
-            // for(let t of target.childNodes){
-            //     if(select_all){
-            //         t.dataset.selected = 'false';
-            //         t.classList.remove('selected');
-            //     }else{
-            //         if(t.dataset.selected === 'true' && t.dataset.date !== 'all') validator.push(t.dataset.date);
-            //     }
-            // }
-            //
-            // if(validator.length > 0){
-            //     all_selector.dataset.selected = 'false';
-            //     all_selector.classList.remove('selected');
-            //     if(element.dataset.type === 'year'){
-            //         document.getElementById('month_container').style.display = 'flex';
-            //         document.getElementById('month_container').classList.remove('hidden');
-            //         modelDataIo.view.redraw();
-            //     }
-            // } else {
-            //     all_selector.dataset.selected = 'true';
-            //     all_selector.classList.add('selected');
-            //     if(element.dataset.type === 'year'){
-            //         document.getElementById('month_container').style.display = 'none';
-            //         document.getElementById('month_container').classList.add('hidden');
-            //         SELECTOR.time.clear_selection('month');
-            //         modelDataIo.view.redraw();
-            //     }
-            // }
-
-
-            //console.log(validator);
-
-
-            /*
-
-            times_select: function (type, element = null) {
-            this.times.required = [];
-            if (this.times[type].includes(this.times.has_default)) this.times[type] = [];
-
-            if (element) {
-                const pos = this.times[type].indexOf(element.data);
-                if (pos === -1) {
-                    this.times[type].push(element.data);
-                } else {
-                    this.times[type].splice(pos, 1);
-                }
-            }
-
-            if (this.times[type].length === 0 && !this.times[type].includes(this.times.has_default)) {
-                this.times[type].push(this.times.has_default);
-            }
-
-            for (let y of this.times.years) {
-                if (y !== 'all' && this.times.months[0] === 'all') this.times.required.push(y.toString());
-                for (let m of this.times.months) {
-                    const month = y + String(m).padStart(2, '0');
-                    if (m !== 'all') this.times.required.push(month);
-                }
-            }
-
-            this.times.selected = this.times.years[0] === 'all' ? ['all'] : this.times.required;
-
-            this.times.required = this.times.required.filter((t) => !this.times.loaded.includes(t));
-
-            //console.log('this.times', this.times);
-
-            wudi_get_data(this.times.required);
-
-            obs_handler({'T': Object.entries(this.times)});
-
-            vars.dom_time[type].map((y) => y.set_state(this.times[type].includes(y.data)));
-
-            if (this.times.years[0] !== 'all') {
-                const years_grp = [...this.times.years];
-                const months_grp = [...this.times.months];
-
-                //Y: u/d days per year
-                //M: u/d days (August) 2003
-                //Ds: daily WUDI values
-                //Y: u/d days month of x
-
-                const n_months = util.to_lexical_range(months_grp, 'mo');//.toString();//.trim();
-                ///alert(`-${months}-${util.to_lexical_range(years_grp)}`);
-                //alert(months.length);
-                // console.log(n_months);
-                title.innerHTML = n_months[0] !== undefined ? n_months + ' ' + util.to_lexical_range(years_grp) : util.to_lexical_range(years_grp);
-
-                document.getElementById('months_container').style.display = 'flex';
-                //document.getElementById('years_container').style.height = '24px';
-                //if(vars.view.init_state)
-                window_redraw();
-            }else{
-                title.innerHTML = '1979 to 2020';
-                document.getElementById('months_container').style.display = 'none';
-                //document.getElementById('years_container').style.height = '48px';
-                //if(vars.view.init_state)
-                window_redraw();
-            }
-
-        },
-
-
-
-
-
-
-
-
-
-
-
-            //console.log(evt.target);
-
-
-        }
-        */
         },
     },
     point:{
-        data: {selected: [0]},
+        data: {selected: []},
         deselect_all(){
             // vars.selecta.wudi.points.selected.map(pt => {
             //     wudi_point_select_state(pt, false, true);
@@ -372,7 +258,17 @@ const SELECTOR = {
 
         },
         select(pid) {
-            // const pos = this.points.selected.indexOf(pid);
+            const pos = SELECTOR.point.data.selected.indexOf(pid);
+
+            if (pos === -1) {
+                SELECTOR.point.data.selected.push(pid);
+            }else{
+                SELECTOR.point.data.selected.splice(pos, 1);
+            }
+
+            DATA.temporal_data_acquire.get_points();
+
+            modelDataIo.init_vars.trace.log('point selection', SELECTOR.point.data.selected);
             // // console.log(pos);
             //
             // if (pos === -1) {
@@ -401,23 +297,6 @@ const SELECTOR = {
         }
     },
 };
-
-
-
-
-class dataClass {
-    constructor(pid){
-        this.id = pid;
-        return this;
-    }
-    set(keys, values){
-        for(let i=0; i<keys.length;i++){
-            this[keys[i]] = values[i];
-        }
-        return this;
-    }
-}
-
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
@@ -451,7 +330,6 @@ function build_data_part(obj, custom_length=null){
 
     delete(obj);
 }
-
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
@@ -488,7 +366,8 @@ const request_data_callback = (resource) => {
                     DATA.RAW[obj.name] = obj;
                     break;
                 case 'json-ser':
-                    if (obj.name === 'places_data' || obj.name === 'mpa_s') {
+                    if (obj.name === 'places' || obj.name === 'protected_areas') {
+                        console.log(obj);
                         build_data_part(obj);
                     }
                     if (obj.name === 'wudi_points') {
@@ -532,6 +411,7 @@ const REQ = {
         if(modelDataIo.load_segments.actual === modelDataIo.load_segments.total){
             modelDataIo.init_with_data();
         }
+        return true;
     },
     progress_callback(count, obj, obj_asset=null){
         if(count === -1){
@@ -577,27 +457,32 @@ export const modelDataIo = {
         modelDataIo.delta_time = timer('modelDataIo init -> init_with_data').start();
         modelDataIo.view = view;
         modelDataIo.graph = graph;
-        modelDataIo.model = model;
+        // modelDataIo.model = model;
         modelDataIo.init_vars = init_vars;
 
         if(windowJsConfig.debug) modelDataIo.REQ.load(jsConfig.assets.test).then(r => modelDataIo.REQ.complete(r));
         modelDataIo.REQ.load(jsConfig.assets.static).then(r => modelDataIo.REQ.complete(r));
         modelDataIo.REQ.post_method_load(jsConfig.assets.database).then(r => modelDataIo.REQ.complete(r));
+        return true;
     },
     // 👉️ PHASE TWO
     init_with_data(){
+
+        //modelDataIo.model.layers.make.wudi_points_instance(DATA);
+
         const message = `${modelDataIo.delta_time.var_name} ${util.formatBytes(modelDataIo.bytes_loaded_total)} ${util.formatMs(modelDataIo.delta_time.stop())}`;
         modelDataIo.init_vars.trace.log(message);
-        modelDataIo.model.layers.make.wudi_points_instance(DATA);
 
         if(windowJsConfig.debug) {
             console.log(DATA.SD);
             console.log(DATA.TD);
-            console.log('DATA',DATA);
+            // console.log('DATA',DATA);
         }
 
-        modelDataIo.view.READY = true;
-        modelDataIo.view.update('initial');
+        //modelDataIo.view.READY = true;
+        //modelDataIo.view.update('initial');
+        ///return true;
+        modelDataIo.view.post_init();
         return true;
     },
     DATA,

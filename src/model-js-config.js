@@ -92,10 +92,45 @@ const jsConfig = {
     degree_scale_str: 'deg_2',
     static_path: "/data",
     map_sectors_layers: {
-        draw: true,
+        draw: false,
         allow: ['polygons', 'line_strings', 'contours', 'mpa_s']
     },
     MAP_DEBUG: false,
+    keys_table:{
+		places: (d, ref) => {
+			return {
+				'name': d.townLabel,
+				'lon': d.lon,
+				'lat': d.lat,
+				'population': d.population,
+				'country': d.countryLabel,
+				'region': d.regionLabels,
+				'georegion': ref,
+				'water': d.waterLabels,
+				'area': d.area ? d.area+'km sq.' : null,
+				'type': d.type,
+				'openstreet': d.node ? `<a class="darklink" href="https://www.openstreetmap.org/node/${d.node}" target="new">${d.node}</a>` : null,
+				'wikidata': d.source ? `<a class="darklink" href="https://www.wikidata.org/wiki/${d.source}" target="new">${d.source}</a>` : null,
+				'is capital': d.capital === 'yes' ? d.capital : null
+			}
+		},
+		protected_areas: (d, ref=null) => {
+			return{
+				'website': d.WEBSITE ? `<a class="darklink" href="${d.WEBSITE}" target="new">${d.WEBSITE}</a>` : null,
+				'lon': d.CENTROID[0],
+				'lat': d.CENTROID[1],
+				'year': d.STATUS_YR,
+				'status': d.STATUS_ENG,
+				'country': d.COUNTRY,
+				'region': d.MED_REGION,
+				'mapamed id': d.MAPAMED_ID,
+				'site type': d.SITE_TYPE_ENG,
+				'designation': d.DESIG_ENG,
+				'IUCN category': d.IUCN_CAT_ENG,
+				'area': d.REP_AREA ? d.REP_AREA+'km sq.' : null
+			}
+		}
+	}
 }
 
 export default jsConfig

@@ -337,6 +337,7 @@ const map = {
     sector_count: 0,
     object: new THREE.Group(),
     update(cam_obj, user_position){
+        if(!jsConfig.map_sectors_layers.draw) return;
         map.object.children.forEach(sector => {
             map.vc.a.copy(sector.userData.center);
             map.object.localToWorld(map.vc.a);
@@ -354,6 +355,7 @@ const map = {
         });
     },
     init(model){
+        if(!jsConfig.map_sectors_layers.draw) return;
         const map_deg = jsConfig.sector_degree_scale;
         map.sector_count = (model.dimensions.x * (1 / map_deg) * (model.dimensions.y * (1 / map_deg)));
 

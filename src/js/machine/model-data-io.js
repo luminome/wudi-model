@@ -83,6 +83,7 @@ const DATA = {
                 const time_slot = obj.tim === '40' ? 'all' : obj.tim.toString();
                 SELECTOR.time.data.loaded.push(time_slot);
                 const data = obj.raw.data;
+                DATA.RAW[obj.name] = data;
                 DATA.TD.points_count = data.length;
                 DATA.TD[time_slot] = {'data': data, 'meta': obj.raw.meta};
             });
@@ -125,22 +126,23 @@ const DATA = {
             }
 
         },
-        set_points(result_obj){
-            //#// ex chunks : there's an issue with completion here...
-            console.log(result_obj);
-            //alert(result_obj.special.length);
+        set_points(resource){
+            resource.list.forEach(obj => {
+                const request_length = obj.special.length; ///number of points per time.
+                const asset_raw_length = obj.raw.data.length;
+                const general_length = asset_raw_length / request_length;
+                const subset_arrays = array_collide(obj.raw.data, general_length);
 
-            const request_length = result_obj.special.length; ///number of points per time.
-            const asset_raw_length = result_obj.raw.data.length;
-            const general_length = asset_raw_length / request_length;
-            const subset_arrays = array_collide(result_obj.raw.data, general_length);
-
-            subset_arrays.map((v, n) => {
-                const time_slot = `${result_obj.special[n]}-${result_obj.tim}`;
-                DATA.TD.point_cache[time_slot] = {'data': v, 'meta': v.length, 'id':result_obj.special[n], 'style':jsConfig.graph_styles[result_obj.tim.length]};
-            })
-
-            //const ref = Object.keys(DATA.TD.point_cache);
+                subset_arrays.map((v, n) => {
+                    const time_slot = `${obj.special[n]}-${obj.tim}`;
+                    DATA.TD.point_cache[time_slot] = {
+                        'data': v,
+                        'meta': v.length,
+                        'id': obj.special[n],
+                        'style': jsConfig.graph_styles[obj.tim.length]
+                    };
+                })
+            });
             modelDataIo.graph.run();
             //wudi_graph_chart_daily();
             //const p_hover = vars.selecta.wudi.points.canonical_selection[0];
@@ -245,17 +247,11 @@ const SELECTOR = {
         },
     },
     point:{
-        data: {selected: []},
+        data: {
+            selected: [],
+        },
         deselect_all(){
-            // vars.selecta.wudi.points.selected.map(pt => {
-            //     wudi_point_select_state(pt, false, true);
-            // });
-            // vars.selecta.wudi.points.dom_handles.map(dh => {
-            //     dh.dom_delete();
-            // });
             SELECTOR.point.data.selected = [];
-            //vars.selecta.wudi.points.dom_handles = [];
-
         },
         select(pid) {
             const pos = SELECTOR.point.data.selected.indexOf(pid);
@@ -267,40 +263,14 @@ const SELECTOR = {
             }
 
             DATA.temporal_data_acquire.get_points();
-
             modelDataIo.init_vars.trace.log('point selection', SELECTOR.point.data.selected);
-            // // console.log(pos);
-            //
-            // if (pos === -1) {
-            //     this.points.selected.push(pid);
-            //     //wudi_point_select_state(vars.selecta.wudi.points.hover[0], true, true);
-            //     //wudi_point_select_state(pid, true, true);
-            //     //move_map_to_point(pid);
-            //     //move_to_point(pid);
-            //     const rpt = new wudiSelectionDomMark(pid);
-            //     this.points.dom_handles.push(rpt);
-            //     rpt.draw();
-            //     //
-            // } else {
-            //     this.points.selected.splice(pos, 1);
-            //     this.points.dom_handles[pos].dom_delete();
-            //     this.points.dom_handles.splice(pos, 1);
-            //     //wudi_point_select_state(vars.selecta.wudi.points.hover[0], false, true);
-            //     //wudi_point_select_state(pid, false, true);
-            // }
-            // //#// where to put graph option?
-            // wudi_get_point_detail(this.points.selected).then(r => {
-            //     return r;
-            // })
-            //wudi_get_point_detail(this.points.selected);
-            //obs_handler({'T':Object.entries(this.points.selected)});
         }
     },
 };
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
-function build_data_part(obj, custom_length=null){
+function SET_DATA_SD(obj, custom_length=null){
 
     function set(dt, keys, values){
         for(let i=0; i<keys.length;i++){
@@ -345,6 +315,7 @@ const array_collide = (data, len) => {
 
 const request_data_callback = (resource) => {
     if(resource.name === 'wudi_temporal') return DATA.temporal_data_acquire.set(resource);
+    if(resource.name === 'wudi_point_temporal') return DATA.temporal_data_acquire.set_points(resource);
     //if(resource.name === 'wudi_point_temporal') return DATA.temporal_data_acquire.set_points(resource);
 
     resource.list.forEach(obj => {
@@ -355,7 +326,7 @@ const request_data_callback = (resource) => {
                 case 'csv_text':
                     obj.raw = array_collide(array_auto(obj.raw), obj.columns);
                     if (obj.style === 'data') {
-                        build_data_part(obj, obj.columns);
+                        SET_DATA_SD(obj, obj.columns);
                     } else if (obj.style === 'multi_line') {
                         //save as RAW
                         DATA.RAW[obj.name] = obj;
@@ -368,13 +339,13 @@ const request_data_callback = (resource) => {
                 case 'json-ser':
                     if (obj.name === 'places' || obj.name === 'protected_areas') {
                         console.log(obj);
-                        build_data_part(obj);
+                        SET_DATA_SD(obj);
                     }
                     if (obj.name === 'wudi_points') {
-                        build_data_part(obj);
+                        SET_DATA_SD(obj);
                     }
                     if (obj.name === 'wudi_assoc') {
-                        build_data_part(obj);
+                        SET_DATA_SD(obj);
                     }
                     if (obj.name === 'wudi_temporal_data') {
                         //only used on initial load of "all";
@@ -467,21 +438,13 @@ export const modelDataIo = {
     },
     // 👉️ PHASE TWO
     init_with_data(){
-
-        //modelDataIo.model.layers.make.wudi_points_instance(DATA);
-
         const message = `${modelDataIo.delta_time.var_name} ${util.formatBytes(modelDataIo.bytes_loaded_total)} ${util.formatMs(modelDataIo.delta_time.stop())}`;
         modelDataIo.init_vars.trace.log(message);
-
         if(windowJsConfig.debug) {
             console.log(DATA.SD);
             console.log(DATA.TD);
-            // console.log('DATA',DATA);
+            console.log(DATA.RAW);
         }
-
-        //modelDataIo.view.READY = true;
-        //modelDataIo.view.update('initial');
-        ///return true;
         modelDataIo.view.post_init();
         return true;
     },

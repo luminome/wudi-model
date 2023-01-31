@@ -156,6 +156,8 @@ export const controls = {
             }
         }
 
+        model.updateMatrix();
+        model.updateMatrixWorld();
         // controls.cam.run();
     }
 }

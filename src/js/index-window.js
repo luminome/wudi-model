@@ -1,58 +1,12 @@
-// import * as util from './util';
-import windowJsConfig from "../window-js-config";
-
-const display_inline_array = ['none', 'inline-block'];
+import jsConfig from "../model-js-config";
 const display_array = ['none', 'block'];
-//const wudi_type_array = [{item:'upwelling',label:'up'}, {item:'downwelling',label:'down'}];
 
 const page_handle = document.getElementById("page-handle-icon");
 const model_controls = document.getElementById('model-controls');
-const bounds = document.getElementById('bounds');
 const bounds_overlay = document.getElementById('bounds-overlay');
-const intro_box = document.getElementById('intro-box');
 const instructions_slide = document.getElementById('intro-instructions');
 const intro_slide = document.getElementById('intro');
 
-class domTimeElement {
-    constructor(id, time_type, label, data, auto_select = false) {
-        this.dom_element = null;
-        this.label = label;
-        this.id = id;
-        this.data = data;
-        this.is_auto_selected = auto_select;
-        this.selected = auto_select;
-        this.type = time_type;
-        this.init();
-        this.set_state(this.selected);
-    }
-
-
-    init() {
-        const el = document.getElementById('time_element_temp').cloneNode(true);
-        this.dom_element = el;
-        el.innerHTML = this.label;
-        el.setAttribute('id', 'time-' + this.type + '-' + this.id);
-        el.setAttribute('data-id', this.data);
-        el.addEventListener('click', this.dom_select.bind(el, this));
-        document.getElementById(this.type + '_container').appendChild(el);
-        //if(this.is_auto_selected) el.classList.toggle('selected');
-    }
-
-    set_state(bool) {
-        this.selected = bool;
-        if (bool) {
-            this.dom_element.classList.add('selected');
-        } else {
-            this.dom_element.classList.remove('selected');
-        }
-    }
-
-    dom_select(bound, e) {
-        obs_handler(e.target.dataset);
-        vars.selecta.wudi.times_select(bound.type, bound);///engage()
-    }
-
-}
 // DOM ONLY
 const times = {
     years: [],
@@ -79,36 +33,13 @@ const times = {
             } else if (type === 'month') {
                 times.add_dom_element('all',type,'MONTHS',target, true);
                 for (let t = 1; t < 13; t++) {
-                    const label = windowJsConfig.months_str[t-1];
+                    const label = jsConfig.months_str[t-1];
                     times.add_dom_element(t.toString().padStart(2, "0"),type,label,target);
                 }
                 target.classList.add('hidden');
                 target.style.display = 'none';//.add('hidden');
             }
         })
-    },
-    populate(type) {
-        if (type === 'years') {
-            const test_time = new domTimeElement(0, 'years', 'YEARS', 'all', true);
-            this.years.push(test_time);
-            for (let t = 1980; t < 2021; t++) {
-                const label = t.toString().substr(2, 2);
-                const test_time = new domTimeElement(t, 'years', label, t);
-                this.years.push(test_time);
-            }
-            vars.selecta.wudi.times_select('years');
-        } else if (type === 'months') {
-            const test_time = new domTimeElement(0, 'months', 'MONTHS', 'all', true);
-            this.months.push(test_time);
-            for (let t = 1; t < 13; t++) {
-                // const label = String(t).padStart(2, '0');
-                const label = util.months_str[t-1];//String(t).padStart(2, '0');
-                const test_time = new domTimeElement(t, 'months', label, t);
-                this.months.push(test_time);
-            }
-            vars.selecta.wudi.times_select('months');
-        }
-        return true;
     }
 }
 // object to handle html page-context functions and 'basic' dom-population.
@@ -137,7 +68,7 @@ const page = {
             const svg_check_one = document.getElementById("check-box-1").cloneNode(true);
             b.insertBefore(svg_check_one, b.firstChild);
             b.insertBefore(svg_check_zero, b.firstChild);
-            const r_col = windowJsConfig.colors[b.id];
+            const r_col = jsConfig.colors[b.id];
             b.style.fill = r_col;
             b.style.color = r_col;
         });
@@ -169,7 +100,7 @@ const page = {
             kma.removeAttribute('id');
             kma.style.width = '24px';
             kma.style.height = '24px';
-            kma.style.fill = windowJsConfig.colors[kv[0]];
+            kma.style.fill = jsConfig.colors[kv[0]];
             el.appendChild(kma);
         });
 
@@ -195,7 +126,7 @@ const page = {
         page.instructions_button.param = 'instructions';
 
         [...document.querySelectorAll('.is-overlay')].map(wp => {
-            wp.style.backgroundColor = windowJsConfig.colors.window_overlay;
+            wp.style.backgroundColor = jsConfig.colors.window_overlay;
         });
 
     },
@@ -210,7 +141,7 @@ const page = {
 
         page.init_dom();
         page.init_events();
-        if(windowJsConfig.debug) page.state_open();
+        if(jsConfig.GENERAL_DEBUG) page.state_open();
     },
     interaction_pause(state=false){
         page.interaction_state = state;

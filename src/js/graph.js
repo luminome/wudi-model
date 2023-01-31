@@ -1,4 +1,4 @@
-import windowJsConfig from '../window-js-config';
+import jsConfig from "../model-js-config";
 
 const out = document.getElementById('obs');
 const dom_source = document.getElementById("graph");
@@ -126,7 +126,7 @@ function make_axes_and_grid(_ctx, data){
 	        _ctx.font = `${g.vis.font_siz}px heavy_data`;
 	        _ctx.textAlign = 'left';
 	        _ctx.fillStyle = g.vis.legend_text;///"#00ff00";//+ (g.vis.font_siz / 2)
-			const label = g.style === 'year' ? windowJsConfig.months_str[x_range_arr.r[xva]] : g.x_range_start+x_range_arr.r[xva];
+			const label = g.style === 'year' ? jsConfig.months_str[x_range_arr.r[xva]] : g.x_range_start+x_range_arr.r[xva];
 	        _ctx.fillText(label, (g.vis.gutter.left+x_off), (g.h-(g.vis.gutter.bottom/2)) + (g.vis.font_siz / 2.0) );
     	}
 	}
@@ -289,7 +289,7 @@ function graph_event(e){
 
 		//kf += `<span>${g.g_rect.w}</span></br><span>${u_x-g.g_rect.x}</span>`;
 
-		dom_marker_value.innerHTML = (g.style === 'year' ? windowJsConfig.months_str[rx] : (g.x_range_start+rx)) + kf;
+		dom_marker_value.innerHTML = (g.style === 'year' ? jsConfig.months_str[rx] : (g.x_range_start+rx)) + kf;
 		const dk = dom_marker_value.getBoundingClientRect();
 		dom_marker_value.style.top = u_y-(dk.height)+'px';
 		dom_marker_value.style.left = u_x-(dk.width/2)+'px';

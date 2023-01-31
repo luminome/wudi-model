@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import {loader} from './machine/loader';
-import windowJsConfig from '../window-js-config';
 import jsConfig from '../model-js-config';
 import * as util from "./machine/util";
 import model from "./model";
@@ -81,7 +80,7 @@ class Sector {
                         value: new THREE.Color(jsConfig.mats.contours.dict.color)
                     },
                     baseColor: {
-                        value: new THREE.Color(windowJsConfig.colors.window)
+                        value: new THREE.Color(jsConfig.colors.window)
                     }
                 },
                 vertexShader: document.getElementById('bathos-vertex-Shader').textContent,
@@ -128,7 +127,7 @@ class Sector {
                     const shape = util.shape_from_array(mpa);
                     const geometry = new THREE.ShapeBufferGeometry(shape);
                     const t_mat = mpa_mat.clone();
-                    const t_color = ref.STATUS_ENG === 'Designated' ? windowJsConfig.colors.mpa_s_designated : windowJsConfig.colors.mpa_s_proposed;
+                    const t_color = ref.STATUS_ENG === 'Designated' ? jsConfig.colors.mpa_s_designated : jsConfig.colors.mpa_s_proposed;
                     t_mat.color = new THREE.Color(t_color);
                     t_mat.opacity = 0.25;
                     const mesh = new THREE.Mesh(geometry, t_mat);
@@ -169,7 +168,7 @@ class Sector {
                         value: new THREE.Color(jsConfig.mats.polygonsMaterial.dict.color)
                     },
                     baseColor: {
-                        value: new THREE.Color(windowJsConfig.colors.window)
+                        value: new THREE.Color(jsConfig.colors.window)
                     }
                 },
                 vertexShader: document.getElementById('map-polygons-vertex-Shader').textContent,

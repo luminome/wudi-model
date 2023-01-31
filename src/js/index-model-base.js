@@ -12,7 +12,6 @@ import graph from "./graph.js";
 import {logger as LOG} from "./machine/logger.js";
 import timer from './machine/timer.js';
 import * as util from './machine/util.js';
-import windowJsConfig from "../window-js-config";
 import jsConfig from "../model-js-config";
 
 const runtime_timer = timer('main-initialization-loop').start();
@@ -29,8 +28,8 @@ const init_vars = {
         height: window.innerHeight,
         scene_width: 20,
         colors:{
-            window_background: windowJsConfig.colors.window,
-            view_elements: windowJsConfig.colors.view_elements,
+            window_background: jsConfig.colors.window,
+            view_elements: jsConfig.colors.view_elements,
         },
         features:{
             default_view_z: 30.0,
@@ -46,7 +45,7 @@ const init_vars = {
                 pitch: 2.0,
                 shape_length: 10.0,
                 shape_scale: 0.005,
-                color: windowJsConfig.colors.view_elements,
+                color: jsConfig.colors.view_elements,
             },
             center_line:{
                 on: false,
@@ -61,7 +60,7 @@ const init_vars = {
                 on: true,
                 size: 40.0,
                 weight: 1,
-                color: windowJsConfig.colors.view_elements,
+                color: jsConfig.colors.view_elements,
                 opacity: 0.5,
                 limit: 30.0
             }
@@ -301,8 +300,8 @@ const graph_component = {
 
             download_component.output(cache_for_output);
 
-            const up_col = windowJsConfig.colors.up_welling;//utility_color.fromArray(vars.colors.upwelling).getHex();
-            const dn_col = windowJsConfig.colors.down_welling;//utility_color.fromArray(vars.colors.downwelling).getHex();
+            const up_col = jsConfig.colors.up_welling;//utility_color.fromArray(vars.colors.upwelling).getHex();
+            const dn_col = jsConfig.colors.down_welling;//utility_color.fromArray(vars.colors.downwelling).getHex();
 
             let y_limits = [];
             if(mean[1] === 0){
@@ -329,11 +328,11 @@ const graph_component = {
 
             //console.log(graph_obj, vars.selecta.wudi);
 
-            graph(graph_obj, view.bounds_width, windowJsConfig.graph_obj_height, DAT.SELECTOR);
+            graph(graph_obj, view.bounds_width, jsConfig.graph_obj_height, DAT.SELECTOR);
 
             graph_component.dom.classList.remove('hidden');
             graph_component.dom.style.display = 'block';
-            graph_component.dom.style.height = windowJsConfig.graph_obj_height+'px';
+            graph_component.dom.style.height = jsConfig.graph_obj_height+'px';
             graph_component.active = true;
 
         }else{
@@ -384,7 +383,7 @@ const view = {
     model_height: null,
     bounds_width: null,
     bounds_height: null,
-    bounds_bottom_offset: windowJsConfig.bounds_bottom_offset,
+    bounds_bottom_offset: jsConfig.bounds_bottom_offset,
     camera_auto_affine: false,
     max_allowable_zoom: 20.0,
     model_visible_dimensions: null,
@@ -569,7 +568,7 @@ const view = {
             this.display_element = this.dom_element.querySelector('.info-body');
             this.temp_element = this.dom_element.querySelector('.info-temp');
             this.dom_element.querySelector('.info-head').innerHTML = this.text.toString();
-            this.dom_element.style.backgroundColor = windowJsConfig.colors.window_overlay;
+            this.dom_element.style.backgroundColor = jsConfig.colors.window_overlay;
             this.dom_element.classList.remove('hidden');
             this.rect = this.dom_element.getBoundingClientRect();
         },
@@ -720,8 +719,8 @@ const view = {
         const mark = document.createElement('div');
         mark.classList.add('dmark');
         mark.innerHTML = '0.0';
-        mark.style.color = windowJsConfig.colors.view_elements;//'gray';//vars.colors.hex_css(vars.colors.chart_tick);
-        mark.style.backgroundColor = windowJsConfig.colors.window_overlay;
+        mark.style.color = jsConfig.colors.view_elements;//'gray';//vars.colors.hex_css(vars.colors.chart_tick);
+        mark.style.backgroundColor = jsConfig.colors.window_overlay;
         dom_target.appendChild(mark);
         return mark;
     },
@@ -926,8 +925,8 @@ const view = {
 
         init_vars.trace.log('bounds_rect', view.bounds_width, view.bounds_height);
 
-        obs.style.color = windowJsConfig.colors.view_elements;
-        obs.style['background-color'] = windowJsConfig.colors.window_overlay;
+        obs.style.color = jsConfig.colors.view_elements;
+        obs.style['background-color'] = jsConfig.colors.window_overlay;
         obs.onscroll = (event) => {
             event.preventDefault();
         }
@@ -971,8 +970,8 @@ const view = {
         const bars = [...document.querySelectorAll('.bar')];
 
         bars.map(b => {
-            if(windowJsConfig.dom_references.hasOwnProperty(b.id)){
-                if(windowJsConfig.dom_references[b.id].on){
+            if(jsConfig.dom_references.hasOwnProperty(b.id)){
+                if(jsConfig.dom_references[b.id].on){
                     const bbox = b.getBoundingClientRect();
                     if(b.style.display !== 'none') {
                         bars_height += bbox.height;
@@ -1123,7 +1122,7 @@ const interactive = {
             const sector = map_sectors_group.children[index].userData.owner;
             // const plane = scene.getObjectByName('plane_line-' + index);
             // const ske = plane.parent.userData.owner;
-            if(vars.DEBUG){
+            if(jsConfig.GENERAL_DEBUG){
                 return {
                     text: sector.test_validate(), ///['plane' + index, plane.userData.level, plane.userData.aux],
                     index: index,
@@ -1174,7 +1173,7 @@ const interactive = {
             }
 
             for(let u of jsConfig.wudi_type_array){
-                const col = windowJsConfig.colors[u.item];
+                const col = jsConfig.colors[u.item];
                 const stat = util.r_sum(stats[u.label], stats.times.length);
                 labels.push(`<span style="font-family:heavy_data_bold, sans-serif; color:${col}">${stat} ${u.label}-days</span>`);
             }
@@ -1401,6 +1400,7 @@ RUN.init(document.getElementById('model'), CTL, init_vars);
 //init events handler
 EVT.init(init_vars.dom);
 EVT.vars.callback.update_function = get_evt_data;
+EVT.vars.callback.toggle = jsConfig.DEBUG_TRACE_INITIAL_STATE;
 
 init_vars.trace.log('components loaded', 'ok');
 

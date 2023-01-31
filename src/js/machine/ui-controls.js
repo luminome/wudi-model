@@ -1,5 +1,5 @@
 import * as THREE from 'three/build/three.module.js';
-//#// this is for camera and displacement control.
+// this is for camera and displacement control.
 
 const util_v = new THREE.Vector3();
 const y_up = new THREE.Vector3(0, 1, 0);

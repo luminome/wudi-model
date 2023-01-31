@@ -1,11 +1,6 @@
 import * as THREE from "three";
 import * as util from "./machine/util";
-import timer from './machine/timer.js';
-import * as config from '../model-config';
-import windowJsConfig from "../window-js-config";
 import jsConfig from '../model-js-config';
-
-
 
 
 const objects = {
@@ -174,10 +169,6 @@ const wudi_selector = {
 }
 */
 
-const map_sectors = {
-
-}
-
 const layers = {
     u:{
         mat: new THREE.Matrix4(),
@@ -242,8 +233,8 @@ const layers = {
             DATA.CONF.geo_regions = geo_regions_assoc;
 
             const bar_instances = [
-                {name: 'wudi_down', len: data.length, base_color: windowJsConfig.colors.down_welling, visible: true, sign: -1},
-                {name: 'wudi_up', len: data.length, base_color: windowJsConfig.colors.up_welling, visible: true, sign: 1}
+                {name: 'wudi_down', len: data.length, base_color: jsConfig.colors.down_welling, visible: true, sign: -1},
+                {name: 'wudi_up', len: data.length, base_color: jsConfig.colors.up_welling, visible: true, sign: 1}
             ];
 
             const bar_attributes = ['color', 'position', 'mid_position', 'rotation', 'scale', 'value', 'raw', 'index', 'color_default'];
@@ -325,7 +316,7 @@ const layers = {
             const pop = util.find_scale(data, 'population');
             for (let i = 0; i < datum.len; i++) {
                 const place = data[i];
-                datum.color.push(layers.u.color.set(windowJsConfig.colors.places).toArray());
+                datum.color.push(layers.u.color.set(jsConfig.colors.places).toArray());
                 datum.position.push([place.lon, place.lat, 0.0]);
 
                 let pop_norm = util.norm_val(place.population, pop.min, pop.avg);
@@ -361,7 +352,7 @@ const layers = {
 
             for (let i = 0; i < data.length; i++) {
                 const pro_area = data[i];
-                datum.color.push(layers.u.color.set(windowJsConfig.colors.mpa_s_designated).toArray());
+                datum.color.push(layers.u.color.set(jsConfig.colors.mpa_s_designated).toArray());
                 datum.position.push([pro_area.CENTROID[0], pro_area.CENTROID[1], 0.0]);
                 let norm =  util.norm_val(pro_area.REP_AREA, area.min, area.avg);
                 if (norm > 4.0) norm = 4.0;
@@ -386,7 +377,7 @@ const layers = {
             const data = raw_data.slice(1, raw_data.length);
 
             const material = new THREE.LineBasicMaterial({
-                color: layers.u.color.set(windowJsConfig.colors.iso_bath).clone(),
+                color: layers.u.color.set(jsConfig.colors.iso_bath).clone(),
                 opacity: jsConfig.iso_bath_opacity,
                 transparent: true
             });

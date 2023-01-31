@@ -1,5 +1,4 @@
 import {loader, post_loader} from './loader.js';
-import windowJsConfig from '../../window-js-config';
 import jsConfig from '../../model-js-config';
 import * as util from "./util";
 import timer from "./timer";
@@ -184,7 +183,7 @@ const SELECTOR = {
             if (SELECTOR.time.data.selected.length > 0) {
                 const years_grp = [...SELECTOR.time.data.year];
                 const months_grp = [...SELECTOR.time.data.month];
-                const n_months = util.to_lexical_range(months_grp, windowJsConfig.months_str, 'mo');
+                const n_months = util.to_lexical_range(months_grp, jsConfig.months_str, 'mo');
                 modelDataIo.view.title_dom.innerHTML = n_months[0] !== undefined ? n_months + ' ' + util.to_lexical_range(years_grp) : util.to_lexical_range(years_grp);
             }else{
                 modelDataIo.view.title_dom.innerHTML = '1979 to 2020';
@@ -420,7 +419,7 @@ export const modelDataIo = {
     view: null,
     bytes_loaded_total:0,
     load_segments: {
-        total:windowJsConfig.debug ? 3 : 2,
+        total:jsConfig.GENERAL_DEBUG ? 3 : 2,
         actual:0
     },
     // 👉️  PHASE ONE
@@ -431,7 +430,7 @@ export const modelDataIo = {
         // modelDataIo.model = model;
         modelDataIo.init_vars = init_vars;
 
-        if(windowJsConfig.debug) modelDataIo.REQ.load(jsConfig.assets.test).then(r => modelDataIo.REQ.complete(r));
+        if(jsConfig.GENERAL_DEBUG) modelDataIo.REQ.load(jsConfig.assets.test).then(r => modelDataIo.REQ.complete(r));
         modelDataIo.REQ.load(jsConfig.assets.static).then(r => modelDataIo.REQ.complete(r));
         modelDataIo.REQ.post_method_load(jsConfig.assets.database).then(r => modelDataIo.REQ.complete(r));
         return true;
@@ -440,7 +439,7 @@ export const modelDataIo = {
     init_with_data(){
         const message = `${modelDataIo.delta_time.var_name} ${util.formatBytes(modelDataIo.bytes_loaded_total)} ${util.formatMs(modelDataIo.delta_time.stop())}`;
         modelDataIo.init_vars.trace.log(message);
-        if(windowJsConfig.debug) {
+        if(jsConfig.GENERAL_DEBUG) {
             console.log(DATA.SD);
             console.log(DATA.TD);
             console.log(DATA.RAW);

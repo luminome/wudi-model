@@ -1,7 +1,8 @@
+const path_prefix = '';//./data/'; ///Users/sac/Sites/wudi-model-update/data/static-build-products/'
 const jsConfig = {
     colors: {
-        down_welling:'#0000FF',
-        up_welling:'#FF0000',
+        up_welling:'#0000FF',
+        down_welling:'#FF0000',
         mpa_s_designated:'#00FF00',
         mpa_s_proposed:'#00CC00',
         places:'#FFFF00',
@@ -48,7 +49,7 @@ const jsConfig = {
     },
     contours: {
         depth_max: 5000.0,
-        limit_distance: 50.0,
+        limit_distance: 20.0,
     },
     mats: {
         mapMarkersMaterial: {
@@ -71,17 +72,30 @@ const jsConfig = {
                 opacity: 0.25
             }
         },
+        depthMeshMaterial: {
+            type: 'MeshBasicMaterial', //'MeshStandardMaterial', //MeshBasicMaterial
+            dict: {
+                // transparent: true,
+                // opacity:1.0,
+                // color: 0x222222,
+                side: 'FrontSide',
+                // flatShading: true,
+                // metalness: 0.0,
+                // roughness: 0.85,
+
+            }
+        },
         polygonsMaterial: {
             type: 'MeshBasicMaterial',
             dict: {
-                color: 0x444444,
+                color: 0x222222,
                 side: 'FrontSide',
             }
         },
         contours: {
             type: 'LineBasicMaterial',
             dict: {
-                color: 0x222222
+                color: 0x222266,  //222222
             }
         },
         line_strings: {
@@ -101,19 +115,24 @@ const jsConfig = {
         database:{
             name: 'database_queries',
             list: [
-                {"url": "/map", "table": "places_test", "type": "json-ser", "name": "places", "style":"point", "tck": [0, 0, 0], "geom_index": 11},
-                {"url": "/map", "table": "protected_regions", "type": "json-ser", "name": "protected_areas", "style":"point", "tck": [0, 0, 0]},
+                {"url": "/map", "table": "places", "type": "json-ser", "name": "places", "style":"point", "tck": [0, 0, 0], "geom_index": 11},
+                {"url": "/map", "table": "protected_areas", "type": "json-ser", "name": "protected_areas", "style":"point", "tck": [0, 0, 0]},
+                {"url": "/map", "table": "geo_associations", "type": "json-ser", "name": "wudi_assoc", "tck": [0, 0, 0]},
                 {"url": "/wudi", "table": "turn_table", "type": "json-ser", "name": "wudi_points", "tck": [0, 0, 0]},
-                {"url": "/wudi", "table": "assoc", "type": "json-ser", "name": "wudi_assoc", "tck": [0, 0, 0]},
                 {"url": "/wudi", "tim": "40", "type": "json-ser", "name": "wudi_temporal_data", "tck": [0, 0, 40]},
             ],
         },
         static:{
+            // map-eco-regions-11.txt
+            // map-geo-names-2.txt
+            // map-iso-bath-200-1.txt
+
             name: 'static_datasets',
             list: [
-                {url: './data/v2-raw-geonames-1.txt', type: 'csv_text', name: 'geonames', columns: 1, size:0, style: 'data', geom_index: 0},
-                {url: './data/raw-isobath-100m-1.txt', type: 'csv_text', name: 'iso_bath', columns: 1, size:0, style: 'multi_line', geom_index: 0},
-                {url: './data/raw-georegions-11.txt', type: 'csv_text', name: 'georegions', columns: 11, size:0, style: 'data', geom_index: 0}
+                {url: path_prefix+'map-geo-names-2.txt', type: 'csv_text', name: 'geonames', columns: 2, size:0, style: 'data', geom_index: 0},
+                //{url: './data/raw-isobath-100m-1.txt', type: 'csv_text', name: 'iso_bath', columns: 1, size:0, style: 'multi_line', geom_index: 0},
+                {url: path_prefix+'map-iso-bath-200-1.txt', type: 'csv_text', name: 'iso_bath', columns: 1, size:0, style: 'multi_line', geom_index: 0},
+                {url: path_prefix+'map-eco-regions-11.txt', type: 'csv_text', name: 'georegions', columns: 11, size:0, style: 'data', geom_index: 0}
             ]
         }
     },
@@ -131,14 +150,15 @@ const jsConfig = {
     bounds: [-7.0, 29.0, 37.0, 49.0],
     sector_degree_scale: 2.0,
     degree_scale_str: 'deg_2',
-    static_path: "/data",
+    static_path: "", //"/data",
     map_sectors_layers: {
         draw: true,
-        allow: ['polygons', 'line_strings', 'contours', 'mpa_s']
+        allow: ['polygons', 'depth_maps'], /// 'depth_maps'], //'meshes'], //, ''contours', mpa_s'], //, 'meshes'] 'polygons', 'line_strings',
     },
-    GENERAL_DEBUG: false,
+    GENERAL_DEBUG: true,
     MAP_DEBUG: false,
     DEBUG_TRACE_INITIAL_STATE: false,
+    map_axes_active: true,
     keys_table:{
 		places: (d, ref) => {
 			return {
@@ -174,8 +194,14 @@ const jsConfig = {
 			}
 		}
 	},
-    months_str: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-
+    months_str: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    active_layers: {
+        wudi_points: true,
+        places: false,
+        protected_areas: false,
+        iso_bath: true
+    },
+    data_source_masked_indices: true
 }
 
 export default jsConfig

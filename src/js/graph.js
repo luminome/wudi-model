@@ -1,10 +1,9 @@
-import jsConfig from "../model-js-config";
+import jsConfig from "./config";
 
 const out = document.getElementById('obs');
 const dom_source = document.getElementById("graph");
 const dom_marker = document.getElementById("graph-mark");
 const dom_marker_value = document.getElementById("graph-mark-value");
-// const dom_close = document.getElementById("graph-close");
 const dom_title = document.getElementById("graph-title");
 
 let operational_context = null;
@@ -83,7 +82,7 @@ function get_range(m, axis){
 	let range = Math.ceil((hi-lo)/gr);
 	//range += (axis === 'y' && range % 2 !== 0) ? 1 : 0;
 
-	g.log({d:diff, g:gr, z:zg, hi:hi, lo:lo});
+	//g.log({d:diff, g:gr, z:zg, hi:hi, lo:lo});
 
 	const out_range = [];
 	for(let c = 0; c <= range; c++){
@@ -324,7 +323,7 @@ function graph_event(e){
 }
 
 function graph(graph_obj, w, h, context){
-	operational_context = context;
+	//operational_context = context;
     g.w = w;
     g.h = h;
 
@@ -358,8 +357,8 @@ function graph(graph_obj, w, h, context){
 	dom_source.parentNode.style.height = g.h+'px';
 
 	//TODO// DAYS PER/x
-	const points_lex = operational_context.point.data.selected.map(se => 'Nº'+se);
-	const is_multi = operational_context.point.data.selected.length;
+	const points_lex = context.map(se => 'Nº'+se);
+	const is_multi = context.length;
 
 	dom_title.innerHTML = `point${is_multi > 1 ? 's':''} `+points_lex+' ';
 

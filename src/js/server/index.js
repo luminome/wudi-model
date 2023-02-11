@@ -5,6 +5,7 @@ const port = process.env.PORT || config.default_port;
 
 app.use(express.static('dist'));
 app.use(express.static('static'));
+app.use(express.static('/Users/sac/Sites/wudi-model-update/data/static-build-products'));
 
 const pack = require('../../../package.json');
 

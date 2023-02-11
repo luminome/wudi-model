@@ -1,4 +1,4 @@
-import jsConfig from "../model-js-config";
+import jsConfig from "./config";
 const display_array = ['none', 'block'];
 
 const page_handle = document.getElementById("page-handle-icon");

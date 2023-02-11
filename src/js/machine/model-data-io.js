@@ -1,5 +1,5 @@
 import {loader, post_loader} from './loader.js';
-import jsConfig from '../../model-js-config';
+import jsConfig from '../config';
 import * as util from "./util";
 import timer from "./timer";
 
@@ -7,6 +7,9 @@ const DATA = {
     temporal_data_process:{
         average(caller = null) {
             const points_count = DATA.TD.points_count;///vars.data.wudi_data.points_count;
+
+            console.log(points_count);
+
             const times_count = SELECTOR.time.data.selected.length;//vars.selecta.wudi.times.selected.length;
 
             const new_normals = []; //averaged normals values for all points
@@ -292,7 +295,8 @@ function SET_DATA_SD(obj, custom_length=null){
     }
 
     for (let i = 0; i < count; i++) {
-        const dt = {id:i};
+        const dt = {};//id:i
+        //DATA.SD[obj.name].push(set(dt, keys, data[i]));
         DATA.SD[obj.name].push(set(dt, keys, data[i]));
     }
 

@@ -1,12 +1,12 @@
 import * as THREE from "three";
 
-const vk = new THREE.Vector3();
+// const vk = new THREE.Vector3();
 const vw = new THREE.Vector3();
-const vu = new THREE.Vector3();
-const vc = new THREE.Vector3();
+// const vu = new THREE.Vector3();
+// const vc = new THREE.Vector3();
 const y_up = new THREE.Vector3(0, 1, 0);
-const x_right = new THREE.Vector3(1, 0, 0);
-const z_in = new THREE.Vector3(0, 0, 1);
+// const x_right = new THREE.Vector3(1, 0, 0);
+// const z_in = new THREE.Vector3(0, 0, 1);
 
 const mover = {
     name: 'synthetic_displacement',

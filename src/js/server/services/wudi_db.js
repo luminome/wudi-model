@@ -1,6 +1,7 @@
 const path = require('path');
 const Sqlite = require("better-sqlite3");
-const db = new Sqlite(path.resolve('databases/wudi.db'), {fileMustExist: true});
+const db = new Sqlite(path.resolve('/Users/sac/Sites/wudi-model-update/data/output-databases/wudi.db'), {fileMustExist: true});
+//const db = new Sqlite(path.resolve('databases/wudi.db'), {fileMustExist: true});
 
 function query(sql, params) {
   return db.prepare(sql).all(params);

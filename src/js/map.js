@@ -1,15 +1,50 @@
 import * as THREE from "three";
 import {loader} from './machine/loader';
-import jsConfig from '../model-js-config';
+import jsConfig from './config';
 import * as util from "./machine/util";
 import model from "./model";
+import {set_buffer_at_index, v3_from_buffer} from "./machine/util";
 
+
+import { Line2 } from 'three/examples/jsm/lines/Line2.js';
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
+
+//https://www.npmjs.com/package/delaunay-triangulate
+const triangulate = require("delaunay-triangulate")
 
 const map_loader = {
     notify(count, obj, parent_obj){
         //console.log(count, obj, parent_obj);
     }
 }
+
+const objects = {
+    hexagonal_shape(scale = 1.0) {
+        const v = new Float32Array(21);
+        let int = ((Math.PI * 2) / 6);
+        for (let i = 0; i < v.length; i += 3) {
+            v[i] = (Math.cos((i / 3) * int)) * scale;
+            v[i + 1] = (Math.sin((i / 3) * int)) * scale;
+            v[i + 2] = 0.0;
+        }
+        const a_geometry = new THREE.BufferGeometry();
+        a_geometry.setAttribute('position', new THREE.BufferAttribute(v, 3));
+        a_geometry.setIndex([0, 1, 2, 2, 3, 0, 3, 4, 5, 5, 0, 3]);
+        a_geometry.rotateZ(Math.PI/2);
+        return a_geometry;
+    }
+}
+
+const vc = {
+    a: new THREE.Vector3(0, 0, 0),
+    b: new THREE.Vector3(0, 0, 0),
+    c: new THREE.Vector3(0, 0, 0),
+    d: new THREE.Vector3(0, 0, 0),
+    e: new THREE.Vector3(0, 0, 0),
+    up: new THREE.Vector3(0, 0, 1),
+}
+
 //general map-sector
 class Sector {
     // herein lies the changeover to MPA as sectorized data: in "draw()"
@@ -86,26 +121,48 @@ class Sector {
                 vertexShader: document.getElementById('bathos-vertex-Shader').textContent,
                 fragmentShader: document.getElementById('bathos-fragment-Shader').textContent,
             });
-
             const contours = new THREE.Group();
             object.raw.map(obj => {
                 const contour_depth = new THREE.Group();
+                //const coord_arrays = util.coords_from_array(obj['line_strings'], obj['d'] / -jsConfig.contours.depth_max);
                 const coord_arrays = util.coords_from_array(obj['line_strings'], obj['d'] / -jsConfig.contours.depth_max);
+
 
                 for (let vertices of coord_arrays) {
                     const geometry = new THREE.BufferGeometry();
                     geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(vertices), 3));
-                    geometry.deleteAttribute('uv');
-                    geometry.deleteAttribute('normal');
+
+                    // geometry.setAttribute('normal', new THREE.BufferAttribute(Float32Array.from(vertices), 3));
+                    // geometry.deleteAttribute('uv');
+                    // geometry.deleteAttribute('normal');
+                    geometry.computeVertexNormals();
+
+
                     const contour = new THREE.Line(geometry, bath_o_mat);
+                    contour.name = 'depth_contour';
+                    contour.interactive = true;
                     contour_depth.add(contour);
+
+                    // const t = (vertices.length/3);
+                    // const i = Math.floor(Math.random()*t);//t/2);
+                    // if(t > 20) {
+                    //     util.v3_from_buffer(geometry.attributes.position.array, i, map.vc.a);
+                    //
+                    //     const ref_geom = objects.hexagonal_shape(0.01/object.level);
+                    //     const ref_mat = new THREE.MeshBasicMaterial({color: 0xFF0000});
+                    //     const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
+                    //     ref_marker.position.copy(map.vc.a);
+                    //     contour_depth.add(ref_marker);
+                    // }
+
                 }
 
                 contour_depth.name = 'contours';
                 contour_depth.userData.depth = obj['d'];
                 contour_depth.userData.level = object.level;
-                contour_depth.position.set(0, 0, -0.0025);
+                contour_depth.position.set(0, 0, 0);//-0.0025);
                 contours.add(contour_depth);
+
             });
             contours.name = 'contours';
             contours.userData.level = object.level;
@@ -115,14 +172,14 @@ class Sector {
 
         }
 
-        if (object.name === 'mpa_s') {
+        if (object.name === 'protected_areas') {
             const mpa_mat = new THREE[jsConfig.mats.mpaMaterial.type](jsConfig.mats.mpaMaterial.dict);
             mpa_mat.blending = THREE.AdditiveBlending;
 
             object.raw.map(obj => {
                 const this_mpa_s = new THREE.Group();
                 const ref = map.protected_areas[obj['id']];
-                //console.log(ref);
+
                 obj['line_strings'].map((mpa, n) => {
                     const shape = util.shape_from_array(mpa);
                     const geometry = new THREE.ShapeBufferGeometry(shape);
@@ -138,15 +195,11 @@ class Sector {
                     this_mpa_s.add(mesh);
                 })
 
-                this_mpa_s.userData.mpa_s_outlines = util.coords_from_array([obj['line_strings']]);
+                this_mpa_s.userData.outline = util.coords_from_array([obj['line_strings']]);
                 this_mpa_s.userData.area = ref.REP_AREA ? ref.REP_AREA : 0.0;
                 this_mpa_s.userData.index = obj['id'];
                 this_mpa_s.userData.level = object.level;
-                // this_mpa_s.name = 'protected_areas-' + obj['id'];
-                // this_mpa_s.userData.type = 'mpa_s';
-                //this_mpa_s.interactive = true;
                 this.group.add(this_mpa_s);
-                //this.group.computeBoundingSphere();
             });
 
             // mpa_s.name = 'mpa_s';//+obj['id'];
@@ -194,6 +247,280 @@ class Sector {
             this.group.add(polygons);
             this.group.position.setZ(-0.001);
         }
+
+        if (object.name === 'depth_maps') {
+
+            const c_object = object.raw[0];
+            //console.log(c_object)
+
+            const bath_o_mat = new THREE.ShaderMaterial({
+                uniforms: {
+                    depth: {
+                        value: jsConfig.contours.limit_distance
+                    },
+                    color: {
+                        value: new THREE.Color(jsConfig.mats.contours.dict.color)
+                    },
+                    baseColor: {
+                        value: new THREE.Color(jsConfig.colors.window)
+                    }
+                },
+                vertexShader: document.getElementById('bathos-vertex-Shader').textContent,
+                fragmentShader: document.getElementById('bathos-fragment-Shader').textContent,
+            });
+            const vertices = [];
+            const contours = new THREE.Group();
+
+            //console.log(c_object.labels);
+            // c_object.labels.map(label_depth => {
+            //
+            //     for(let n=0; n < label_depth.labels.length; n++){
+            //         const label = label_depth.labels[n];
+            //         //console.log(label_depth.d, label[0], label[1]);
+            //         //console.log(label_depth.d, label[0], label[1]);
+            //         const ref_geom = objects.hexagonal_shape(0.01);///object.level);
+            //         const ref_mat = new THREE.MeshBasicMaterial({
+            //             transparent: true,
+            //             opacity:0.7,
+            //             color: 0xFF0000,
+            //             depthWrite: false,
+            //             depthTest: false,
+            //         });
+            //         const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
+            //         ref_marker.position.set(label[0][0], label[0][1], label_depth.d / jsConfig.contours.depth_max);//copy(map.vc.a);
+            //         contours.add(ref_marker);
+            //     }
+            //
+            //
+            // });
+                                // const t = (vertices.length/3);
+                    // const i = Math.floor(Math.random()*t);//t/2);
+                    // if(t > 20) {
+                    //     util.v3_from_buffer(geometry.attributes.position.array, i, map.vc.a);
+                    //
+                    //     const ref_geom = objects.hexagonal_shape(0.01/object.level);
+                    //     const ref_mat = new THREE.MeshBasicMaterial({color: 0xFF0000});
+                    //     const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
+                    //     ref_marker.position.copy(map.vc.a);
+                    //     contour_depth.add(ref_marker);
+                    // }
+
+
+
+            c_object.contour_lines.map(line => {
+                const line_verts = [];
+                for(let n=line.start; n<line.end; n++){
+                    const xyz = [c_object.verts_xy[n*2], c_object.verts_xy[n*2+1], line.depth / jsConfig.contours.depth_max];
+                    line_verts.push(...xyz);
+                    vertices.push(...xyz);
+                }
+
+
+                //# this is good, save it.
+                const sub_vertices = [];
+                for (let i = 0; i < line_verts.length/3; i++) {
+                    const v3 = new THREE.Vector3(line_verts[i*3],line_verts[i*3+1],line_verts[i*3+2]);
+                    sub_vertices.push(v3);
+                }
+
+                const a = 0.00125
+
+                for (let i = 0; i < sub_vertices.length-1; i++) {
+                    vc.a.subVectors(sub_vertices[i], sub_vertices[i+1]);
+                    vc.b.crossVectors(vc.up, vc.a);
+                    vc.c.addVectors(sub_vertices[i], vc.b.normalize().multiplyScalar(a))
+                    util.set_buffer_at_index(line_verts,i,vc.c.toArray());
+
+                    if(i === sub_vertices.length-2){ //next last element
+                        vc.a.subVectors(sub_vertices[i], sub_vertices[i+1]);
+                        vc.b.crossVectors(vc.up, vc.a);
+                        vc.c.addVectors(sub_vertices[i], vc.b.normalize().multiplyScalar(a*2))
+                        util.set_buffer_at_index(line_verts,i+1,vc.c.toArray());
+
+                        vc.d.fromArray(util.get_buffer_at_index(line_verts,0));
+                        const kd = vc.c.distanceTo(vc.d);
+                        if(kd < 0.05) line_verts.push(...util.get_buffer_at_index(line_verts,0));
+                    }
+                }
+
+                const geometry = new THREE.BufferGeometry();
+                geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(line_verts), 3));
+                geometry.computeVertexNormals();
+                geometry.translate(0,0,a);
+
+                const contour = new THREE.Line(geometry, bath_o_mat);
+                contour.name = 'depth_contour';
+                contour.userData.depth = line.depth;
+                contour.interactive = true;
+                contours.add(contour);
+
+
+                // Line2 ( LineGeometry, LineMaterial )
+				// const f_geometry = new LineGeometry();
+				// f_geometry.setPositions( line_verts );
+				// //geometry.setColors( colors );
+				// const matLine = new LineMaterial( {
+				// 	color: 0xffffff,
+				// 	linewidth: 0.005, // in world units with size attenuation, pixels otherwise
+				// 	vertexColors: false,
+				// 	//resolution:  // to be set by renderer, eventually
+				// 	dashed: false,
+				// 	alphaToCoverage: true,
+				// } );
+                //
+				// const f_line = new Line2( f_geometry, matLine );
+				// f_line.computeLineDistances();
+				// f_line.scale.set( 1, 1, 1 );
+                //
+                // contours.add(f_line);
+
+            });
+
+            // const sub_vertices = [];
+            // for (let i = 0; i < vertices.length/3; i++) {
+            //     const v3 = [vertices[i*3],vertices[i*3+1],vertices[i*3+2]];
+            //     sub_vertices.push(v3);
+            // }
+            //
+            // const triangles = triangulate(sub_vertices);
+            // console.log(triangles);
+
+
+            for(let n=0; n<c_object.verts_xyz.length/3; n++){
+                const xyz = [c_object.verts_xyz[n*3], c_object.verts_xyz[n*3+1], c_object.verts_xyz[n*3+2] / jsConfig.contours.depth_max];
+                vertices.push(...xyz)
+            }
+
+            //console.log(vertices);
+
+            const meshes_material = new THREE[jsConfig.mats.depthMeshMaterial.type](jsConfig.mats.depthMeshMaterial.dict);
+            meshes_material.color.set(jsConfig.colors.window);
+            //meshes_material.blending = THREE.NormalBlending;//.set(jsConfig.colors.window);
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(vertices), 3));
+            const k_index = new THREE.BufferAttribute(Uint16Array.from(c_object.indices), 1);
+            geometry.setIndex(k_index);
+            //geometry.computeVertexNormals();
+            geometry.scale(1,1,1);///jsConfig.contours.depth_max);
+
+            const mesh = new THREE.Mesh(geometry, meshes_material);
+            //mesh.position.set(0.0,0.0,-0.01);
+        //     object.raw.map(obj => {
+        //         //console.log(obj, obj.indices.length, obj.vertices.length/3);
+        //         const geometry = new THREE.BufferGeometry();
+        //         geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(obj.vertices), 3));
+        //         const k_index = new THREE.BufferAttribute(Uint16Array.from(obj.indices), 1);
+        //         //console.log(k_index);
+        //
+        //         geometry.setIndex(k_index);
+        //         // geometry.deleteAttribute('uv');
+        //         // geometry.deleteAttribute('normal');
+        //         //
+        //         ///geometry.computeVertexNormals();
+        //         geometry.scale(1,1,1/jsConfig.contours.depth_max);
+        //
+        //         const mesh = new THREE.Mesh(geometry, meshes_material);
+        //         meshes.add(mesh);
+        //
+        //     })
+        //     meshes.userData.level = object.level;
+        //     meshes.userData.enabled = false;
+        //     meshes.userData.type = 'meshes';
+        //     meshes.name = object.name;
+        //     this.group.add(meshes);
+        //     meshes.position.set(0.0,0.0,-0.01);
+
+            contours.userData.level = object.level;
+            contours.userData.enabled = true;
+            contours.userData.type = 'contours';
+
+
+
+
+            contours.add(mesh);
+            this.group.add(contours);
+
+
+
+
+            //  line_stat = {
+            //     "depth": depth,
+            //     "len": util.value_cleaner(line.length, 5),
+            //     "coords": len(line.coords),
+            //     "start": start_index,
+            //     "end": end_index
+            // }
+            // "contour_lines": lines_record,
+            // "verts_xy": contour_vt_xy.round(4).tolist(),
+            // "verts_xyz": depth_vt_xyz.tolist(),
+            // "indices": indices.flatten().tolist(),
+            // "labels": labels_collection
+
+
+
+
+
+
+
+            //
+            // const meshes = new THREE.Group();
+            // const meshes_material = new THREE[jsConfig.mats.depthMeshMaterial.type](jsConfig.mats.depthMeshMaterial.dict);
+            // object.raw.map(obj => {
+            //     //console.log(obj, obj.indices.length, obj.vertices.length/3);
+            //     const geometry = new THREE.BufferGeometry();
+            //     geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(obj.vertices), 3));
+            //     const k_index = new THREE.BufferAttribute(Uint16Array.from(obj.indices), 1);
+            //     //console.log(k_index);
+            //
+            //     geometry.setIndex(k_index);
+            //     // geometry.deleteAttribute('uv');
+            //     // geometry.deleteAttribute('normal');
+            //     //
+            //     ///geometry.computeVertexNormals();
+            //     geometry.scale(1,1,1/jsConfig.contours.depth_max);
+            //
+            //     const mesh = new THREE.Mesh(geometry, meshes_material);
+            //     meshes.add(mesh);
+            //
+            // })
+            // meshes.userData.level = object.level;
+            // meshes.userData.enabled = false;
+            // meshes.userData.type = 'meshes';
+            // meshes.name = object.name;
+            // this.group.add(meshes);
+            // meshes.position.set(0.0,0.0,-0.01);
+        }
+
+
+        // if (object.name === 'meshes') {
+        //     const meshes = new THREE.Group();
+        //     const meshes_material = new THREE[jsConfig.mats.depthMeshMaterial.type](jsConfig.mats.depthMeshMaterial.dict);
+        //     object.raw.map(obj => {
+        //         //console.log(obj, obj.indices.length, obj.vertices.length/3);
+        //         const geometry = new THREE.BufferGeometry();
+        //         geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(obj.vertices), 3));
+        //         const k_index = new THREE.BufferAttribute(Uint16Array.from(obj.indices), 1);
+        //         //console.log(k_index);
+        //
+        //         geometry.setIndex(k_index);
+        //         // geometry.deleteAttribute('uv');
+        //         // geometry.deleteAttribute('normal');
+        //         //
+        //         ///geometry.computeVertexNormals();
+        //         geometry.scale(1,1,1/jsConfig.contours.depth_max);
+        //
+        //         const mesh = new THREE.Mesh(geometry, meshes_material);
+        //         meshes.add(mesh);
+        //
+        //     })
+        //     meshes.userData.level = object.level;
+        //     meshes.userData.enabled = false;
+        //     meshes.userData.type = 'meshes';
+        //     meshes.name = object.name;
+        //     this.group.add(meshes);
+        //     meshes.position.set(0.0,0.0,-0.01);
+        // }
 
         return true;
     }
@@ -302,6 +629,7 @@ class Sector {
     }
 
     update() {
+        //if(this.id !== '75') return;
         this.group.children.forEach(res => {
             if (this.disabled.includes(res.userData.type)) {
                 res.visible = false;
@@ -323,7 +651,6 @@ class Sector {
     }
 }
 
-
 const map = {
     vc: {
         a: new THREE.Vector3(0, 0, 0),
@@ -335,8 +662,22 @@ const map = {
     protected_areas: null,
     sector_count: 0,
     object: new THREE.Group(),
+    sweeps: [],
+    generate_sweep(count, model){
+        for (let i = 0; i < count; i++) {
+            const ref_geom = objects.hexagonal_shape(0.01);
+            const ref_mat = new THREE.MeshBasicMaterial({color: 0xFF0000});
+            const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
+            //ref_marker.position.copy(map.vc.a);
+            model.container.add(ref_marker);
+            map.sweeps.push(ref_marker);
+            //ref_marker.position.set(model.center.x, model.center.y, 0.0);
+            //contour_depth.add(ref_marker);
+        }
+    },
     update(cam_obj, user_position){
         if(!jsConfig.map_sectors_layers.draw) return;
+
         map.object.children.forEach(sector => {
             map.vc.a.copy(sector.userData.center);
             map.object.localToWorld(map.vc.a);
@@ -355,6 +696,8 @@ const map = {
     },
     init(model){
         if(!jsConfig.map_sectors_layers.draw) return;
+        map.generate_sweep(180, model);
+
         const map_deg = jsConfig.sector_degree_scale;
         map.sector_count = (model.dimensions.x * (1 / map_deg) * (model.dimensions.y * (1 / map_deg)));
 
@@ -381,7 +724,6 @@ const map = {
         map.object.position.set(-model.center.x, -model.center.y, 0.0);
         model.container.add(map.object);
     }
-
 }
 
 export default map;

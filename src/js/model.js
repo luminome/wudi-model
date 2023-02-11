@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import * as util from "./machine/util";
-import jsConfig from '../model-js-config';
+import jsConfig from './config';
 
 
 const objects = {
@@ -177,6 +177,38 @@ const layers = {
         qua: new THREE.Quaternion(),
         color: new THREE.Color()
     },
+    data:{
+        wudi_point: {
+            color_adaptive: {
+                wudi_up: [],
+                wudi_down: [],
+            },
+            color_mod: [],
+            color_processed(index, base_color, amt){
+                const offset = layers.data.wudi_point.color_mod[index]; //0,1, or 2
+                layers.u.color.set(base_color);
+                if(offset !== 0){
+                    const b = {};
+                    layers.u.color.getHSL(b);
+                    const tgt_l = 0.5 + (0.125*offset);
+                    layers.u.color.setHSL(b.h, b.s, tgt_l);
+                }else{
+                    layers.u.color.multiplyScalar(amt);
+                }
+                return layers.u.color.toArray();
+            },
+            update(index, value){
+                layers.data.wudi_point.color_mod[index] = value
+                for (let i_mesh of layers.wudi_points.children) {
+                    const c = layers.data.wudi_point.color_adaptive[i_mesh.name][index];
+                    layers.u.color.fromArray(layers.data.wudi_point.color_processed(index, i_mesh.userData.td.base_color, c));
+                    i_mesh.setColorAt(index, layers.u.color.clone());
+                    i_mesh.instanceColor.needsUpdate = true;
+                }
+
+            }
+        }
+    },
     make:{
         generic_instance_mesh(datum){
             const geometry = objects.hexagonal_shape(jsConfig.point_scale);
@@ -219,10 +251,28 @@ const layers = {
             layers.wudi_points =  new THREE.Group();
             layers.wudi_points.name = 'wudi';
 
-            //create internal index list
             const data = DATA.SD.wudi_points;
-            DATA.CONF.wudi_index = data.map(v => v.rowid - 1);
 
+            DATA.CONF.wudi_index_reverse = {};
+
+            if(jsConfig.data_source_masked_indices){
+                DATA.CONF.wudi_index = data.map(v => v.pid);
+                data.map(v => {
+                    DATA.CONF.wudi_index_reverse[v.pid] = v.rowid - 1;
+                });
+
+                //DATA.CONF.wudi_index_reverse = data.map(v => v.pid);
+
+            }else{
+                DATA.CONF.wudi_index = data.map(v => v.rowid - 1);
+            }
+
+            console.log(DATA.CONF.wudi_index_reverse);
+
+
+            layers.data.wudi_point.color_adaptive.wudi_up = Array(data.length).fill(0);
+            layers.data.wudi_point.color_adaptive.wudi_down = Array(data.length).fill(0);
+            layers.data.wudi_point.color_mod = Array(data.length).fill(0);
             //create internal groups of points per geo region
             const geo_regions_assoc = {};
             data.map(v => {
@@ -278,6 +328,7 @@ const layers = {
             for (let bar of bar_instances) {
                 const instance = new THREE.InstancedMesh(bar_geometry, bar_material, bar.len);
                 instance.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                // instance.instanceColor.setUsage(THREE.DynamicDrawUsage);
                 instance.name = bar.name;
                 instance.userData.td = bar;
                 instance.userData.type = 'bar';
@@ -379,12 +430,14 @@ const layers = {
             const material = new THREE.LineBasicMaterial({
                 color: layers.u.color.set(jsConfig.colors.iso_bath).clone(),
                 opacity: jsConfig.iso_bath_opacity,
+                depthTest: false,
+                depthWrite: false,
                 transparent: true
             });
 
             for(let i=0;i<data.length;i++){
                 const l_obj = data[i];
-                const batch = util.coords_from_array(l_obj, -100 / jsConfig.depth_max);
+                const batch = util.coords_from_array(l_obj, -200 / jsConfig.depth_max);
                 for (let vertices of batch) {
                     if (vertices.length > 9) {
                         const geometry = new THREE.BufferGeometry();
@@ -400,7 +453,8 @@ const layers = {
                 }
             }
 
-            layers.iso_bath.position.set(-model.center.x,-model.center.y,0.0);
+            //const z = -200/jsConfig.depth_max;
+            layers.iso_bath.position.set(-model.center.x,-model.center.y, 0.0);
             layers.iso_bath.updateMatrix();
             layers.iso_bath.updateMatrixWorld(true); //force this for first run.
 
@@ -474,21 +528,21 @@ const layers = {
         }
     },
     update: {
-        wudi_points(DATA, cam_obj) {
+        wudi_points(DAT, cam_obj) {
             //#// PERVY make based on distance to camera as well.
             const test = layers.wudi_points.children[0].userData.td;
             const visible = {set: [], wudi_up: [], wudi_down: []};
             let in_view_index = 0;
 
             for (let c = 0; c < test.position.length; c++) {
-                const data_index = DATA.CONF.wudi_index[c];
+                const data_index = c;//DAT.DATA.CONF.wudi_index[c];
                 layers.u.vct.fromArray(test.mid_position[c]);
                 layers.wudi_points.localToWorld(layers.u.vct);
 
                 if (cam_obj.frustum.containsPoint(layers.u.vct)) {
                     visible.set.push([c, data_index, in_view_index]);
-                    visible.wudi_up.push([DATA.TD.current[data_index][3]]);
-                    visible.wudi_down.push([DATA.TD.current[data_index][4]]);
+                    visible.wudi_up.push([DAT.DATA.TD.current[data_index][3]]);
+                    visible.wudi_down.push([DAT.DATA.TD.current[data_index][4]]);
                     in_view_index++;
                 }
             }
@@ -505,18 +559,16 @@ const layers = {
 
                     const wv = visible[i_mesh.name][v[2]][0];
                     const value = lim[2] === 0 || wv === 0 ? (0.0001) : (wv / lim[2]*sign);
-                    const color_value = lim[0] === 0 || wv === 0 ? (0.0001) : (wv / lim[0]*sign);
+
+                    let color_value = lim[0] === 0 || wv === 0 ? (0.0001) : (wv / lim[0]*sign);
+                    layers.data.wudi_point.color_adaptive[i_mesh.name][v[0]] = color_value;
+                    layers.u.color.fromArray(layers.data.wudi_point.color_processed(v[0], i_mesh.userData.td.base_color, color_value));
+                    i_mesh.setColorAt(v[0], layers.u.color.clone());
 
                     layers.u.vct2.setZ(value * jsConfig.bar_scale);
                     layers.u.vct2.setY((1 - cam_obj.camera_scale) * jsConfig.bar_scale_width);
                     layers.u.mat.compose(layers.u.vct, layers.u.qua, layers.u.vct2);
                     i_mesh.setMatrixAt(v[0], layers.u.mat);
-
-                    if (!i_mesh.userData.td.color_default[v[0]].selected) {
-                        layers.u.color.set(i_mesh.userData.td.base_color).multiplyScalar(Math.abs(color_value));
-                        i_mesh.setColorAt(v[0], layers.u.color.clone());
-                        i_mesh.userData.td.color_default[v[0]].color = layers.u.color.toArray();
-                    }
                 }
             }
 
@@ -526,10 +578,12 @@ const layers = {
             }
         },
         places(cam_obj){
-            layers.places.material.uniforms.level.value = (1.0-(cam_obj.camera_scale*0.8));
+
+            if(jsConfig.active_layers.places) layers.places.material.uniforms.level.value = (1.0-(cam_obj.camera_scale*0.8));
         },
         protected_areas(cam_obj){
-            layers.protected_areas.material.uniforms.level.value = (1.0-(cam_obj.camera_scale*0.8));
+
+            if(jsConfig.active_layers.protected_areas) layers.protected_areas.material.uniforms.level.value = (1.0-(cam_obj.camera_scale*0.8));
         }
     }
 }

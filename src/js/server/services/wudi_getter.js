@@ -17,15 +17,15 @@ function get_all(query = null) {
                 query
             }
 
-        }else if (query.table === 'assoc') {
-            const meta = {};
-            const data = db.query(`SELECT *
-                                   FROM wudi_assoc_att`, []);
-            return {
-                data,
-                meta,
-                query
-            }
+        // }else if (query.table === 'assoc') {
+        //     const meta = {};
+        //     const data = db.query(`SELECT *
+        //                            FROM wudi_assoc_att`, []);
+        //     return {
+        //         data,
+        //         meta,
+        //         query
+        //     }
 
         } else {
             const fields = ["u_tl", "d_tl", "e_ct", "e_ls"];
@@ -38,6 +38,7 @@ function get_all(query = null) {
             if (query.tim) {
 
                 if (query.special) {
+                    console.log(query.special);
                     //#pid IN (58,59,60) AND tim LIKE '______15'
                     let req_a = query.special;
                     if (!Array.isArray(req_a)) req_a = req_a.split(',');

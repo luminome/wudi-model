@@ -400,9 +400,12 @@ l-25.2,18.3l-23.4-17.1l13.1-47.4L118.6,57.5z"/>
 <script id="bathos-vertex-Shader" type="vert">
 	uniform float depth;
 	varying float vOpacity;
+	#//varying vec3 vNormal;
 	void main() {
 		vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 		vOpacity = 1.0 - (1.0 / (depth / -mvPosition.z));
+		#//vNormal = normalMatrix * normal;
+		#//normalMatrix * normal;
 		gl_Position = projectionMatrix * mvPosition;
 		if( vOpacity < 0.0) vOpacity = 0.0;
 	}
@@ -412,10 +415,19 @@ l-25.2,18.3l-23.4-17.1l13.1-47.4L118.6,57.5z"/>
 	uniform vec3 color;
 	uniform vec3 baseColor;
 	varying float vOpacity;
+	#//varying vec3 vNormal;
+
+
 	void main() {
+
+
+		#//vec3 norm = normalize(vNormal);
+        #//float nDotL = clamp(dot(vec3(0.0, 0.0, 1.0), norm), 0.0, 1.0);
+
 		float r = baseColor[0]+(color[0]*abs(vOpacity));
 		float g = baseColor[1]+(color[1]*abs(vOpacity));
 		float b = baseColor[2]+(color[2]*abs(vOpacity));
+
 		gl_FragColor = vec4( r, g, b, 1.0 );
 
 		#//gl_FragColor = vec4( color, vOpacity );

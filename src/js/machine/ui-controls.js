@@ -37,6 +37,7 @@ const cam = {
     dot_z: new THREE.Vector3(0, 0, 0),
     util_v: new THREE.Vector3(0, 0, 0),
     cube: null,
+    model_view_bounds:{w:null, h:null},
     init(){
         const cube_box = new THREE.BoxGeometry(2, 2, 2);
         cam.cube = new THREE.Mesh(cube_box, new THREE.MeshStandardMaterial({color: 0xffffff}));

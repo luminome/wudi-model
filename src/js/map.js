@@ -33,7 +33,26 @@ const objects = {
         a_geometry.setIndex([0, 1, 2, 2, 3, 0, 3, 4, 5, 5, 0, 3]);
         a_geometry.rotateZ(Math.PI/2);
         return a_geometry;
+    },
+
+    reference_label(scale = 1.0) {
+        // const v = new Float32Array(21);
+        // let int = ((Math.PI * 2) / 6);
+        // for (let i = 0; i < v.length; i += 3) {
+        //     v[i] = (Math.cos((i / 3) * int)) * scale;
+        //     v[i + 1] = (Math.sin((i / 3) * int)) * scale;
+        //     v[i + 2] = 0.0;
+        // }
+        const geometry = new THREE.PlaneGeometry( scale*2, scale );
+        const material = new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.FrontSide} );
+        const plane = new THREE.Mesh( geometry, material );
+        // const a_geometry = new THREE.BufferGeometry();
+        // a_geometry.setAttribute('position', new THREE.BufferAttribute(v, 3));
+        // a_geometry.setIndex([0, 1, 2, 2, 3, 0, 3, 4, 5, 5, 0, 3]);
+        // a_geometry.rotateZ(Math.PI/2);
+        return plane;
     }
+
 }
 
 const vc = {
@@ -195,10 +214,12 @@ class Sector {
                     this_mpa_s.add(mesh);
                 })
 
+                this_mpa_s.name = object.name+'-'+obj['id'];
                 this_mpa_s.userData.outline = util.coords_from_array([obj['line_strings']]);
                 this_mpa_s.userData.area = ref.REP_AREA ? ref.REP_AREA : 0.0;
                 this_mpa_s.userData.index = obj['id'];
                 this_mpa_s.userData.level = object.level;
+                this_mpa_s.userData.type = 'protected_areas';
                 this.group.add(this_mpa_s);
             });
 
@@ -273,23 +294,59 @@ class Sector {
 
             //console.log(c_object.labels);
             // c_object.labels.map(label_depth => {
-            //
             //     for(let n=0; n < label_depth.labels.length; n++){
             //         const label = label_depth.labels[n];
+            //         if(label[0].length === 6){
+            //
             //         //console.log(label_depth.d, label[0], label[1]);
             //         //console.log(label_depth.d, label[0], label[1]);
-            //         const ref_geom = objects.hexagonal_shape(0.01);///object.level);
-            //         const ref_mat = new THREE.MeshBasicMaterial({
-            //             transparent: true,
-            //             opacity:0.7,
-            //             color: 0xFF0000,
-            //             depthWrite: false,
-            //             depthTest: false,
-            //         });
-            //         const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
-            //         ref_marker.position.set(label[0][0], label[0][1], label_depth.d / jsConfig.contours.depth_max);//copy(map.vc.a);
-            //         contours.add(ref_marker);
+            //         const ref_label = objects.reference_label(0.05);///object.level);
+            //         const dep = label_depth.d / jsConfig.contours.depth_max;
+            //
+            //
+            //         // const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
+            //         ref_label.position.set(label[0][2], label[0][3], dep);
+            //         map.vc.a.set(label[0][0],label[0][1], dep);
+            //         map.vc.b.set(label[0][4],label[0][5], dep);
+            //
+            //         map.vc.c.subVectors(map.vc.b, map.vc.a);
+            //         map.vc.d.crossVectors(map.vc.up, map.vc.c).normalize();
+            //         map.vc.e.set(0,1,0);
+            //
+            //         map.vc.a.set(-1,0,0);
+            //
+            //
+            //
+            //         const o = Math.sign(map.vc.d.dot(map.vc.a));
+            //
+            //         // map.vc.e.subVectors(ref_label.position, map.vc.a);
+            //         // map.vc.c.set(-1,0,0);
+            //         const a = map.vc.e.angleTo(map.vc.d);
+            //         ref_label.rotateZ(a*o);
+            //
+            //
+            //
+            //         contours.add(ref_label);
+            //
+            //         }
             //     }
+            //
+            //     // for(let n=0; n < label_depth.labels.length; n++){
+            //     //     const label = label_depth.labels[n];
+            //     //     //console.log(label_depth.d, label[0], label[1]);
+            //     //     //console.log(label_depth.d, label[0], label[1]);
+            //     //     const ref_geom = objects.reference_label(0.01);///object.level);
+            //     //     const ref_mat = new THREE.MeshBasicMaterial({
+            //     //         transparent: true,
+            //     //         opacity:0.7,
+            //     //         color: 0xFF0000,
+            //     //         depthWrite: false,
+            //     //         depthTest: false,
+            //     //     });
+            //     //     const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
+            //     //     ref_marker.position.set(label[0][0], label[0][1], label_depth.d / jsConfig.contours.depth_max);//copy(map.vc.a);
+            //     //     contours.add(ref_marker);
+            //     // }
             //
             //
             // });
@@ -308,9 +365,10 @@ class Sector {
 
 
             c_object.contour_lines.map(line => {
+
                 const line_verts = [];
-                for(let n=line.start; n<line.end; n++){
-                    const xyz = [c_object.verts_xy[n*2], c_object.verts_xy[n*2+1], line.depth / jsConfig.contours.depth_max];
+                for (let n = line.start; n < line.end; n++) {
+                    const xyz = [c_object.verts_xy[n * 2], c_object.verts_xy[n * 2 + 1], line.depth / jsConfig.contours.depth_max];
                     line_verts.push(...xyz);
                     vertices.push(...xyz);
                 }
@@ -318,62 +376,63 @@ class Sector {
 
                 //# this is good, save it.
                 const sub_vertices = [];
-                for (let i = 0; i < line_verts.length/3; i++) {
-                    const v3 = new THREE.Vector3(line_verts[i*3],line_verts[i*3+1],line_verts[i*3+2]);
+                for (let i = 0; i < line_verts.length / 3; i++) {
+                    const v3 = new THREE.Vector3(line_verts[i * 3], line_verts[i * 3 + 1], line_verts[i * 3 + 2]);
                     sub_vertices.push(v3);
                 }
 
-                const a = 0.00125
+                const a = 0.0015;//0.00125
 
-                for (let i = 0; i < sub_vertices.length-1; i++) {
-                    vc.a.subVectors(sub_vertices[i], sub_vertices[i+1]);
+                for (let i = 0; i < sub_vertices.length - 1; i++) {
+                    vc.a.subVectors(sub_vertices[i], sub_vertices[i + 1]);
                     vc.b.crossVectors(vc.up, vc.a);
                     vc.c.addVectors(sub_vertices[i], vc.b.normalize().multiplyScalar(a))
-                    util.set_buffer_at_index(line_verts,i,vc.c.toArray());
+                    util.set_buffer_at_index(line_verts, i, vc.c.toArray());
 
-                    if(i === sub_vertices.length-2){ //next last element
-                        vc.a.subVectors(sub_vertices[i], sub_vertices[i+1]);
+                    if (i === sub_vertices.length - 2) { //next last element
+                        vc.a.subVectors(sub_vertices[i], sub_vertices[i + 1]);
                         vc.b.crossVectors(vc.up, vc.a);
-                        vc.c.addVectors(sub_vertices[i], vc.b.normalize().multiplyScalar(a*2))
-                        util.set_buffer_at_index(line_verts,i+1,vc.c.toArray());
+                        vc.c.addVectors(sub_vertices[i], vc.b.normalize().multiplyScalar(a))
+                        util.set_buffer_at_index(line_verts, i + 1, vc.c.toArray());
 
-                        vc.d.fromArray(util.get_buffer_at_index(line_verts,0));
+                        vc.d.fromArray(util.get_buffer_at_index(line_verts, 0));
                         const kd = vc.c.distanceTo(vc.d);
-                        if(kd < 0.05) line_verts.push(...util.get_buffer_at_index(line_verts,0));
+                        if (kd < 0.05) line_verts.push(...util.get_buffer_at_index(line_verts, 0));
                     }
                 }
 
-                const geometry = new THREE.BufferGeometry();
-                geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(line_verts), 3));
-                geometry.computeVertexNormals();
-                geometry.translate(0,0,a);
+                if(line.depth !== 0 && line.depth !== -200) {
+                    const geometry = new THREE.BufferGeometry();
+                    geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(line_verts), 3));
+                    geometry.computeVertexNormals();
+                    geometry.translate(0, 0, a);
 
-                const contour = new THREE.Line(geometry, bath_o_mat);
-                contour.name = 'depth_contour';
-                contour.userData.depth = line.depth;
-                contour.interactive = true;
-                contours.add(contour);
+                    const contour = new THREE.Line(geometry, bath_o_mat);
+                    contour.name = 'depth_contour';
+                    contour.userData.depth = line.depth;
+                    contour.interactive = true;
+                    contours.add(contour);
 
 
-                // Line2 ( LineGeometry, LineMaterial )
-				// const f_geometry = new LineGeometry();
-				// f_geometry.setPositions( line_verts );
-				// //geometry.setColors( colors );
-				// const matLine = new LineMaterial( {
-				// 	color: 0xffffff,
-				// 	linewidth: 0.005, // in world units with size attenuation, pixels otherwise
-				// 	vertexColors: false,
-				// 	//resolution:  // to be set by renderer, eventually
-				// 	dashed: false,
-				// 	alphaToCoverage: true,
-				// } );
-                //
-				// const f_line = new Line2( f_geometry, matLine );
-				// f_line.computeLineDistances();
-				// f_line.scale.set( 1, 1, 1 );
-                //
-                // contours.add(f_line);
-
+                    // Line2 ( LineGeometry, LineMaterial )
+                    // const f_geometry = new LineGeometry();
+                    // f_geometry.setPositions( line_verts );
+                    // //geometry.setColors( colors );
+                    // const matLine = new LineMaterial( {
+                    // 	color: 0xffffff,
+                    // 	linewidth: 0.005, // in world units with size attenuation, pixels otherwise
+                    // 	vertexColors: false,
+                    // 	//resolution:  // to be set by renderer, eventually
+                    // 	dashed: false,
+                    // 	alphaToCoverage: true,
+                    // } );
+                    //
+                    // const f_line = new Line2( f_geometry, matLine );
+                    // f_line.computeLineDistances();
+                    // f_line.scale.set( 1, 1, 1 );
+                    //
+                    // contours.add(f_line);
+                }
             });
 
             // const sub_vertices = [];
@@ -392,9 +451,11 @@ class Sector {
             }
 
             //console.log(vertices);
-
+            //bath_o_mat.clone();//
             const meshes_material = new THREE[jsConfig.mats.depthMeshMaterial.type](jsConfig.mats.depthMeshMaterial.dict);
             meshes_material.color.set(jsConfig.colors.window);
+            // meshes_material.uniforms.color.value = new THREE.Color(jsConfig.colors.window);
+            // meshes_material.uniforms.depth.value = 4.0;//new THREE.Color(0x000FFF);///jsConfig.colors.window);
             //meshes_material.blending = THREE.NormalBlending;//.set(jsConfig.colors.window);
 
             const geometry = new THREE.BufferGeometry();
@@ -429,7 +490,8 @@ class Sector {
         //     meshes.userData.type = 'meshes';
         //     meshes.name = object.name;
         //     this.group.add(meshes);
-        //     meshes.position.set(0.0,0.0,-0.01);
+
+
 
             contours.userData.level = object.level;
             contours.userData.enabled = true;
@@ -597,6 +659,7 @@ class Sector {
 
         this.group.userData.center = this.center;
         this.group.userData.owner = this;
+        this.group.name = `Sector-${this.id}-group`;
         this.objects.plane = plane_line;
 
         const meta_json = {name:'sector', list:[{url: `${this.path}/meta.json`, type: 'json', name: 'meta'}]};
@@ -657,7 +720,8 @@ const map = {
         b: new THREE.Vector3(0, 0, 0),
         c: new THREE.Vector3(0, 0, 0),
         d: new THREE.Vector3(0, 0, 0),
-        e: new THREE.Vector3(0, 0, 0)
+        e: new THREE.Vector3(0, 0, 0),
+        up: new THREE.Vector3(0, 0, 1)
     },
     protected_areas: null,
     sector_count: 0,

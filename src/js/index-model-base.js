@@ -4,8 +4,9 @@ import {controls as CTL} from "./machine/ui-controls";
 import {environment as RUN} from "./machine/three-env";
 import {uiCameraDolly as CAM} from "./machine/ui-camera-dolly";
 import {modelDataIo as DAT} from "./machine/model-data-io";
-import {default as MDL} from "./model.js";
+import model, {default as MDL} from "./model.js";
 import {default as MAP} from "./map.js";
+import jsConfig from './config';
 
 import graph from "./graph.js";
 
@@ -51,7 +52,7 @@ const init_vars = {
                 on: false,
             },
             tools:{
-                on: false,
+                on: true,
             },
             position_lines:{
                 on: false,
@@ -463,9 +464,16 @@ const view = {
             // instructions_slide.style.display = display_array[+vars.view.instructions_active];//'block';
         },
         mpa_s_state(){
-            vars.mpa_s_visible = !vars.mpa_s_visible;
+            init_vars.protected_areas_visible = !init_vars.protected_areas_visible;
             this.classList.toggle('control-toggle');
-            control_appearance_sectors('mpa_s', vars.mpa_s_visible );
+
+            if(MAP.object.children.length){
+                MAP.object.children.forEach(s => {
+                    s.userData.owner.toggle_attribute('protected_areas', init_vars.protected_areas_visible);
+                });
+            }
+
+            //control_appearance_sectors('mpa_s', init_vars.protected_area_visible );
         },
         scroll_to_downloads(){
             const box = document.getElementById('output').getBoundingClientRect();
@@ -497,6 +505,8 @@ const view = {
             make_element: (pid) => {
 
                 function init(pid){
+                    ///alert(pid);
+
                     const ref_point = DAT.DATA.CONF.wudi_index.indexOf(pid);
                     const dt = DAT.DATA.SD.wudi_points[ref_point];
                     el.pid = pid;
@@ -777,6 +787,8 @@ const view = {
         view.user_position_round.copy(init_vars.model.position).round().negate();
         view.plane.projectPoint(CTL.cam.pos, view.vc.d);
         CTL.cam.projected.copy(view.vc.d).negate();
+
+
     },
     run_ticks_axes(axis, tick_index, swap = null) {
         const basis = {x: 'x', z: 'z'};
@@ -799,16 +811,17 @@ const view = {
             view.vc.b.set(axes[1].x, 0, 0);
         }
 
-        if (axis === 'z') {
-            if (view.vc.a.dot(CTL.cam.right) < 0) {
-                view.vc.b.negate();
-                if (view.vc.b.x !== 0) view.vc.a.x *= -1.0;
-                if (view.vc.b.z !== 0) view.vc.a.z *= -1.0;
-            }
-        }
+        // if (axis === 'z') {
+        //     if (view.vc.a.dot(CTL.cam.right) < 0) {
+        //         view.vc.b.negate();
+        //         if (view.vc.b.x !== 0) view.vc.a.x *= -1.0;
+        //         if (view.vc.b.z !== 0) view.vc.a.z *= -1.0;
+        //     }
+        // }
         return tick_n;
     },
     run_ticks() {
+
         const zg = Math.floor(Math.log(CTL.cam.distance)) + 1;
         view.grid_resolution = view.mantissas[zg];
         for (let plane of view.axis_planes) {
@@ -828,10 +841,6 @@ const view = {
         }
 
         const ticks = {};
-        //for wudi points handling
-        // vars.selecta.wudi.points.dom_handles.map(dh => {
-        //     dh.draw();
-        // })
 
         view.vc.a.set(0, 0, Math.sign(CTL.cam.projected.z)); //vw
         view.vc.b.set(Math.sign(CTL.cam.projected.x), 0, 0); //vk
@@ -860,6 +869,7 @@ const view = {
                 ticks.n = view.run_ticks_axes(plane.name, m, swap);
                 CTL.ray_caster.set(view.vc.a, view.vc.b); /// vw,vk set by run_ticks_axes;
                 ticks.res = CTL.ray_caster.ray.intersectPlane(plane.plane, view.vc.c);
+
                 plane.markers_divs[m].style.display = ticks.res === null ? 'none' : 'block';
 
                 if (ticks.res !== null) {
@@ -884,8 +894,8 @@ const view = {
                     plane.markers_divs[m].style.left = ticks.left + 'px';
                     plane.markers_divs[m].style.top = ticks.top + 'px';
 
-                    const cas = (ticks.top > view.height || ticks.top < 0 || ticks.left > view.model_width || ticks.left < 0);
-                    plane.markers_divs[m].style.display = cas ? 'none' : 'block';///display_array[+!cas];
+                    // const cas = (ticks.top > view.height || ticks.top < 0 || ticks.left > view.model_width || ticks.left < 0);
+                    // plane.markers_divs[m].style.display = cas ? 'none' : 'block';///display_array[+!cas];
                 }
             }
         }
@@ -1011,6 +1021,7 @@ const view = {
         view.bounds_height = bounds_rect.height;
 
 
+
         let bars_height = 0;
         const bars = [...document.querySelectorAll('.bar')];
 
@@ -1029,6 +1040,9 @@ const view = {
         const stack_height = view.bounds_height - bars_height;
         view.model_width = view.bounds_width;
         view.model_height = stack_height;
+
+        CTL.cam.model_view_bounds.w = view.model_width;
+        CTL.cam.model_view_bounds.h = view.model_height;
 
         model_dom.style.height = view.model_height + 'px';
         intro_box_dom.style.height = view.model_height + 'px';
@@ -1101,6 +1115,7 @@ const view = {
 
         CTL.cam.run();
         view.run_optics();
+
         if(jsConfig.map_axes_active) view.run_ticks();
 
         if(CAM.mover.is_moving){
@@ -1114,18 +1129,24 @@ const view = {
         if(init_vars.view.features.position_lines.on) RUN.objects.position_lines.position.copy(init_vars.model.position).negate();
 
         if(init_vars.view.features.tools.on){
-            RUN.objects.tools.mover_marker.position.copy(CAM.mover.pos);
-            view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
-            RUN.objects.tools.set(CAM.mover.pos, view.vc.a);
+            // RUN.objects.tools.mover_marker.position.copy(CAM.mover.pos);
+            // view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
+            // RUN.objects.tools.set(CAM.mover.pos, view.vc.a);
         }
 
         if(view.READY){
             const m_evt = EVT.vars.callback['screen'].meta;
             //console.log('init_action', m_evt);
+            MDL.layers.update.wudi_points(DAT, CTL.cam);
+            MDL.layers.update.places(DAT, CTL.cam);
 
             if(m_evt.action !== 'move') {
-                MDL.layers.update.wudi_points(DAT, CTL.cam);
-                MDL.layers.update.places(CTL.cam);
+                // MDL.layers.update.wudi_points(DAT, CTL.cam);
+                // MDL.layers.update.places(DAT, CTL.cam);
+
+                view.vc.a.copy(init_vars.model.position);
+                MDL.position_marker.position.set(-view.vc.a.x, view.vc.a.z, 0.0);
+                MDL.position_marker.scale.setScalar((1-CTL.cam.camera_scale) * (MDL.width/2));
             }
             //MDL.layers.update.protected_areas(CTL.cam);
             view.vc.a.set(-CTL.cam.pos.x, 0.0, -CTL.cam.pos.z);//copy(CTL.cam.projected).negate();///set(0,0,0);
@@ -1133,6 +1154,7 @@ const view = {
             view.ui_info.update_position();
             view.ui_control.wudi_point_select.update();
         }
+
 
 
         // return true;
@@ -1148,7 +1170,7 @@ const view = {
         MAP.init(MDL);
 
         MDL.layers.update.wudi_points(DAT, CTL.cam);
-        MDL.layers.update.places(CTL.cam);
+        MDL.layers.update.places(DAT, CTL.cam);
 
         init_vars.trace.log("post_initialization", CTL.cam.camera_scale);
 
@@ -1158,20 +1180,23 @@ const view = {
 
 const interactive = {
     element_info_filter_secondary: {
-        mpa_s: (index = null) => {
-            const ref = vars.refs.mpa_s[parseInt(index)];
-            const readable = vars.keys_table.mpa_s(ref);
+        protected_areas: (index = null) => {
+            const p_area = DAT.DATA.SD.protected_areas[index];
+            console.log(p_area);
+            const p_area_name = Array.isArray(p_area.NAME) ? util.title_case(p_area.NAME[0]) : util.title_case(p_area.NAME);
+            const readable = jsConfig.keys_table.protected_areas(p_area, null);
             return {
-                head: ref.NAME,
+                head: p_area_name,
                 table: Object.entries(readable).filter(m => m[1] !== null),
             }
         },
         places: (index = null) => {
-            const ref = vars.refs.places[parseInt(index)];
-            const ref_geo = vars.refs.geonames[ref.geo] !== undefined ? vars.refs.geonames[ref.geo].GEONAME : null;
-            const readable = vars.keys_table.places(ref, ref_geo);
+            const place = DAT.DATA.SD.places[index];
+            const place_name = Array.isArray(place.name) ? util.title_case(place.name[0]) : util.title_case(place.name);
+            const place_geo = DAT.DATA.SD.geonames[place.geo-1].geoname || null;
+            const readable = jsConfig.keys_table.places(place, place_geo);
             return {
-                head: ref.name,
+                head: place_name,
                 table: Object.entries(readable).filter(m => m[1] !== null),
             }
         }
@@ -1180,7 +1205,8 @@ const interactive = {
         depth_contour: (index = null, obj=null) => {
             //console.log(obj);
             return {
-                text: Math.floor(obj.obj.userData.depth) + 'm'
+                text: Math.floor(obj.obj.userData.depth) + 'm',
+                area: 20000
             }
         },
         plane_line: (index = null, obj=null) => {
@@ -1223,7 +1249,7 @@ const interactive = {
             const data_index = index;//DAT.DATA.CONF.wudi_index[index];
             const wudi_point = DAT.DATA.SD.wudi_points[index];//.slice(6,8);
             //DAT.SELECTOR.point.select(data_index);
-            console.log(wudi_point);
+            //console.log(wudi_point);
 
             const times_list = DAT.SELECTOR.time.data.selected.length === 0 ? ['all'] : DAT.SELECTOR.time.data.selected;
             const stats = {'times': times_list, 'days': [], 'up': [], 'down': [], 'events': []};
@@ -1258,18 +1284,14 @@ const interactive = {
             }
         },
         places: (index = null, obj=null) => {
-            //console.log('place',index);
-
             const place = DAT.DATA.SD.places[index];
             const place_name = Array.isArray(place.name) ? util.title_case(place.name[0]) : util.title_case(place.name);
             const place_geo = DAT.DATA.SD.geonames[place.geo-1].GEONAME || null;
             const region_labels = Array.isArray(place.regionLabels) ? place.regionLabels[0] : place.regionLabels;
-
             const ref_data = [place.countryLabel];
             ref_data.push(region_labels);
             ref_data.push(`${place.type} pop. ${place.population}`);
             ref_data.push(place_geo);
-
             return {
                 head: place_name,
                 text: ref_data.filter(m => m !== null),
@@ -1310,7 +1332,7 @@ const interactive = {
         protected_areas: 8,
         iso_bath: 0,
         plane_line: 0,
-
+        depth_contour: 0
     },
     clean(intersects) {
         interactive.hash_changed = false;
@@ -1321,8 +1343,9 @@ const interactive = {
         let depth_polled = false;
 
         for(let i = 0; i < intersects.length; i++){
-            const I = intersects[i].object;
-            if (I.interactive) {
+            let I = intersects[i].object;
+            if (I.interactive && (I.parent.visible)) {
+
                 if (I.type === 'Line' && limits.includes(I.uuid)) continue;
                 if (!limits.includes(I.uuid)) limits.push(I.uuid);
 
@@ -1330,6 +1353,13 @@ const interactive = {
                 let index = intersects[i].instanceId ? intersects[i].instanceId : null;
                 let is_depth = cat_name.indexOf('depth_contour') !== -1;
                 let is_wudi = cat_name.indexOf('wudi') !== -1;
+
+                if(I.name === 'place_label'){
+                    cat_name = 'places';
+                    index = I.parent.index;
+                    I = MDL.layers.places;
+                }
+
 
                 let natural_name = `${cat_name}-${index}`;
 
@@ -1350,6 +1380,7 @@ const interactive = {
 
                 if(( is_depth && !depth_polled ) || ( is_wudi && !wudi_polled ) || (!is_wudi && !is_depth)) {
                     if (!hash.includes(natural_name)) hash.push(natural_name);
+
                     if (!interactive.hash_info_store.hasOwnProperty(natural_name)){
                         interactive.hash_info_store[natural_name] = {
                             cat:cat_name,
@@ -1358,7 +1389,8 @@ const interactive = {
                             priority: interactive.hash_priority[cat_name],
                             name: natural_name,
                             primary: false,
-                            secondary: false
+                            secondary: false,
+                            valid: false
                         };
                     }
                 }
@@ -1389,40 +1421,126 @@ const interactive = {
         const intersects = CTL.ray_caster.intersectObjects(MDL.container.children);
         interactive.clean(intersects);
 
+        /// view.ui_info.set_state(false);
+        // view.ui_info.dom_element.style.pointerEvents = 'none';
+
         if(interactive.hash_changed){
             interactive.hash_objects = interactive.hash.map(h => {return interactive.hash_info_store[h]});
             interactive.hash_objects.sort((a, b) => a.priority > b.priority ? -1 : 1);
-
             const ui_info_text = [];
 
             interactive.hash_objects.map(h =>{
-                ui_info_text.push(interactive.element_info_filter[h.cat](h.index, h));
+                const record = interactive.element_info_filter[h.cat](h.index, h);
+                h.area = record.area ? record.area : 0;
+                ui_info_text.push(record);
             });
 
+            ui_info_text.sort((a, b) => a.area < b.area ? -1 : 1);
+            interactive.hash_objects.sort((a, b) => a.area < b.area ? -1 : 1);
+
             init_vars.trace.watched['interactive'] = interactive.hash;
-            view.ui_info.set_state(true);
             view.ui_info.set_text(ui_info_text);
             view.ui_info.set_position(CTL.v.user.mouse.screen.x, CTL.v.user.mouse.screen.y, 'mouse');
 
-            ///console.log(interactive.hash_objects[0]);
+            interactive.hash_objects.map((h, n) =>{
+                if(!MDL.outliner.userData.active.includes(h.name)){
+                    MDL.outliner.userData.active.push(h.name);
+                    if (h.cat === 'protected_areas') {
+                        //find the relevant zoom level of this object
+                        h.obj.parent.parent.children.map(pc=>{
+                            if(pc.userData.index === h.index && pc.visible === true){
+                                const t_element = new THREE.Group();
+                                pc.userData.outline.map(o => {
+                                    const lmat = new THREE.LineBasicMaterial({color: jsConfig.colors.mpa_s_designated});
+                                    const geometry = new THREE.BufferGeometry();
+                                    geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(o), 3));
+                                    const p_pline = new THREE.Line(geometry, lmat);
+                                    t_element.add(p_pline);
+                                });
+
+                                // const pro_area = DAT.DATA.SD.protected_areas[h.index];
+                                // const px = pro_area.CENTROID[0] - MDL.center.x;
+                                // const py = pro_area.CENTROID[1] - MDL.center.y;
+                                //
+                                // MDL.outliner.marker.visible = true;
+                                // MDL.outliner.marker.position.set(px,py,0.0);
+                                // const t_color = pro_area.STATUS_ENG === 'Designated' ? jsConfig.colors.mpa_s_designated : jsConfig.colors.mpa_s_proposed;
+                                // MDL.outliner.marker.material.color = new THREE.Color(t_color);
+
+                                t_element.userData.identifier = h.name;
+                                const xt = (t_element.position.x - MDL.center.x);
+                                const yt = (t_element.position.y - MDL.center.y);
+                                t_element.position.set(xt, yt, 0);
+                                MDL.outliner.add(t_element);
+                            }
+                        })
+                    }
+                    if (h.cat === 'places') {
+                        const place = DAT.DATA.SD.places[h.index];
+                        const mu = new THREE.Matrix4();
+                        const p_outlines = new THREE.Group();
+                        const geometry = new THREE.BufferGeometry();
+                        geometry.setAttribute('position', h.obj.geometry.attributes.position);
+                        const lmat = new THREE.LineBasicMaterial({color: jsConfig.colors.places});
+                        const p_pline = new THREE.Line(geometry, lmat);
+                        h.obj.getMatrixAt(h.index, mu);
+                        p_pline.applyMatrix4(mu);
+                        const px = place.lon - MDL.center.x;
+                        const py = place.lat - MDL.center.y;
+                        p_outlines.name = h.name;
+                        p_outlines.userData.identifier = h.name;
+                        p_pline.position.set(px,py,0.0);
+                        p_outlines.add(p_pline);
+                        MDL.outliner.add(p_outlines);
+
+                        // MDL.place_labels.map(pl=>{
+                        //     if(pl.object.index === h.index){
+                        //         pl.marker_c.material.opacity = 0.5;
+                        //     }else{
+                        //         pl.marker_c.material.opacity = 0.0;
+                        //     }
+                        // });//[i].object.
+                    }
+                }
+            });
+
+            MDL.outliner.userData.active.map((h, n)=>{
+                if(!interactive.hash.includes(h)) {
+                    MDL.outliner.userData.active.splice(n,1);
+                    MDL.outliner.children.map(m => {
+                        if(m.userData.identifier === h){
+                            m.removeFromParent();
+                        }
+                    });
+                }
+            });
+            view.ui_info.target_lock = false;
         }
 
         if(interactive.hash_objects.length > 0){
+            view.ui_info.set_state(true);
             const top_element = interactive.hash_objects[0];
             const m_evt = EVT.vars.callback['screen'].meta;
 
-            // if(top_element.cat === 'wudi_point'){
             if(m_evt.action === 'click') {
-                interactive.element_update.set_state(top_element.name, true);
-
-                const data_index = DAT.DATA.CONF.wudi_index[top_element.index];
-
-                DAT.SELECTOR.point.select(data_index);
-
-                view.ui_control.wudi_point_select.update_selection();
+                if(top_element.cat === 'wudi_point') {
+                    interactive.element_update.set_state(top_element.name, true);
+                    const data_index = DAT.DATA.CONF.wudi_index[top_element.index];
+                    DAT.SELECTOR.point.select(data_index);
+                    view.ui_control.wudi_point_select.update_selection();
+                }
+                if(top_element.cat === 'places' || top_element.cat === 'protected_areas') {
+                    view.ui_info.target_lock = true;
+                    view.ui_info.lock_position = CTL.v.user.mouse.screen;
+                    const ktx = interactive.element_info_filter_secondary[top_element.cat](top_element.index);
+                    view.ui_info.set_state(true);
+                    view.ui_info.set_text([ktx]);
+                    view.ui_info.set_position(CTL.v.user.mouse.screen.x, CTL.v.user.mouse.screen.y, 'mouse');
+                }
             }
-            // }
-            //console.log(top_element);
+        }else{
+            //MDL.outliner.marker.visible = false;
+            view.ui_info.set_state(false);
         }
 
         if(intersects.length === 0) {
@@ -1463,13 +1581,14 @@ const interactive = {
 //universal event callback
 function get_evt_data(source){
     if(source === 'screen') {
-        interactive.check();
+        interactive.check();  //if(!CAM.mover.is_moving)
         //view.ui_control.wudi_point_select.update();
 
         CTL.update(EVT.vars.callback[source].meta, init_vars.model);
 
 
-        if(!CAM.mover.is_moving) view.update(source);
+        //if(!CAM.mover.is_moving)
+            view.update(source);
 
         const m_evt = EVT.vars.callback[source].meta;
         init_vars.trace.watched['screen_meta_action'] = m_evt.action;
@@ -1485,7 +1604,7 @@ function get_evt_data(source){
 
         if(m_evt.action === 'click'){
              if(init_vars.view.features.tools.on) {
-                 const d = CTL.cam.max_zoom - (view.vc.a.length() / 2);
+                 const d = 3.0;// CTL.cam.max_zoom - (view.vc.a.length() / 2);
                  init_vars.trace.log('click', d.toFixed(2), CTL.interact_type);
                  CAM.mover.set_target(CAM.mover.pos, view.vc.a, d);
                  view.vc.c.subVectors(view.vc.a, CAM.mover.pos);
@@ -1495,6 +1614,7 @@ function get_evt_data(source){
 
         if(m_evt.action === 'drag' && m_evt.delta_x !== null && m_evt.delta_y !== null){
             CAM.mover.cancel();
+            view.ui_info.set_position(CTL.v.user.mouse.screen.x, CTL.v.user.mouse.screen.y, 'mouse');
         }
 
         if(init_vars.view.features.grid_marks.on && RUN.objects.hasOwnProperty('grid_marks')){

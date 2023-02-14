@@ -21,7 +21,7 @@ const mover = {
     tgt: new THREE.Vector3(),
     move_vector: null,
     attenuation: 1.0,
-    speed: 0.0009,
+    speed: 0.09,
     vd: 0,
     rv: 0,
     is_moving: false,
@@ -85,7 +85,7 @@ const mover = {
         mover.tgt.copy(target_pos);
         vw.subVectors(mover.tgt, mover.pos);
         mover.d_mem = vw.length();
-        mover.speed = mover.d_mem/50000;
+        mover.speed = mover.d_mem/5000;
         if(zoom) {
             mover.z_sta = mover.camera.base_pos.z;
             mover.z_amt = mover.z_sta-zoom;

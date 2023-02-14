@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import * as util from "./machine/util";
 import jsConfig from './config';
-
+import label_maker from "./machine/ui-labels";
+import {controls as CTL} from "./machine/ui-controls";
 
 const objects = {
     hexagonal_shape(scale = 1.0) {
@@ -17,6 +18,35 @@ const objects = {
         a_geometry.setIndex([0, 1, 2, 2, 3, 0, 3, 4, 5, 5, 0, 3]);
         a_geometry.rotateZ(Math.PI/2);
         return a_geometry;
+    },
+    position_mark(radius) {
+        const curve = new THREE.EllipseCurve(
+            0, 0,            // ax, aY
+            radius, radius,           // xRadius, yRadius
+            0, 2 * Math.PI,  // aStartAngle, aEndAngle
+            true,            // aClockwise
+            0                 // aRotation
+        );
+
+        curve.updateArcLengths();
+
+        const points = curve.getPoints(201);
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+        const material = new THREE.LineDashedMaterial({
+            color: 0x00FF00,
+            linewidth: 1,
+            scale: 1,
+            dashSize: radius * 0.1,
+            gapSize: radius * 0.1,
+        });
+
+        // Create the final object to add to the scene
+        const line = new THREE.Line(geometry, material);
+        line.userData.radius = radius;
+        line.computeLineDistances();
+        //line.rotateX(Math.PI / 2);
+        return line;
     }
 }
 
@@ -168,6 +198,15 @@ const wudi_selector = {
     },
 }
 */
+
+const vc = {
+    a: new THREE.Vector3(0, 0, 0),
+    b: new THREE.Vector3(0, 0, 0),
+    c: new THREE.Vector3(0, 0, 0),
+    d: new THREE.Vector3(0, 0, 0),
+    e: new THREE.Vector3(0, 0, 0),
+    up: new THREE.Vector3(0, 0, 1),
+}
 
 const layers = {
     u:{
@@ -361,19 +400,22 @@ const layers = {
                 len: data.length,
                 color: [],
                 position: [],
+                place_id: [],
                 sample_raw: Array(data.length).fill(1.0)
             }
 
             const pop = util.find_scale(data, 'population');
+            //console.log(pop);
+
             for (let i = 0; i < datum.len; i++) {
                 const place = data[i];
                 datum.color.push(layers.u.color.set(jsConfig.colors.places).toArray());
                 datum.position.push([place.lon, place.lat, 0.0]);
-
                 let pop_norm = util.norm_val(place.population, pop.min, pop.avg);
                 if (pop_norm > 5.0) pop_norm = 5;
-                if (pop_norm < 1.0) pop_norm = 1.0;
+                if (pop_norm < 0.25) pop_norm = 0.25;
                 datum.sample_raw[i] = pop_norm;
+                //datum.sample_raw[i] = pop_norm;
             }
 
             layers.places = layers.make.generic_instance_mesh(datum);// new THREE.Group();
@@ -430,18 +472,46 @@ const layers = {
             const material = new THREE.LineBasicMaterial({
                 color: layers.u.color.set(jsConfig.colors.iso_bath).clone(),
                 opacity: jsConfig.iso_bath_opacity,
-                depthTest: false,
-                depthWrite: false,
+                // depthTest: false,
+                // depthWrite: false,
                 transparent: true
             });
 
             for(let i=0;i<data.length;i++){
                 const l_obj = data[i];
                 const batch = util.coords_from_array(l_obj, -200 / jsConfig.depth_max);
+
+                const a = 0.00125
                 for (let vertices of batch) {
                     if (vertices.length > 9) {
+                        const sub_vertices = [];
+                        for (let i = 0; i < vertices.length / 3; i++) {
+                            const v3 = new THREE.Vector3(vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2]);
+                            sub_vertices.push(v3);
+                        }
+
+                        for (let i = 0; i < sub_vertices.length - 1; i++) {
+                            vc.a.subVectors(sub_vertices[i], sub_vertices[i + 1]);
+                            vc.b.crossVectors(vc.up, vc.a);
+                            vc.c.addVectors(sub_vertices[i], vc.b.normalize().multiplyScalar(a))
+                            util.set_buffer_at_index(vertices, i, vc.c.toArray());
+
+                            if (i === sub_vertices.length - 2) { //next last element
+                                vc.a.subVectors(sub_vertices[i], sub_vertices[i + 1]);
+                                vc.b.crossVectors(vc.up, vc.a);
+                                vc.c.addVectors(sub_vertices[i], vc.b.normalize().multiplyScalar(a))
+                                util.set_buffer_at_index(vertices, i + 1, vc.c.toArray());
+
+                                vc.d.fromArray(util.get_buffer_at_index(vertices, 0));
+                                const kd = vc.c.distanceTo(vc.d);
+                                if (kd < 0.05) vertices.push(...util.get_buffer_at_index(vertices, 0));
+                            }
+                        }
+
+
                         const geometry = new THREE.BufferGeometry();
                         geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(vertices), 3));
+                        geometry.translate(0, 0, a);
                         const element = new THREE.Line(geometry, material);
                         element.name = 'iso_bath';
                         element.geometry.computeBoundingBox();
@@ -454,7 +524,7 @@ const layers = {
             }
 
             //const z = -200/jsConfig.depth_max;
-            layers.iso_bath.position.set(-model.center.x,-model.center.y, 0.0);
+            layers.iso_bath.position.set(-model.center.x,-model.center.y, 0.00);
             layers.iso_bath.updateMatrix();
             layers.iso_bath.updateMatrixWorld(true); //force this for first run.
 
@@ -577,19 +647,140 @@ const layers = {
                 i_mesh.instanceColor.needsUpdate = true;
             }
         },
-        places(cam_obj){
-
+        places(DAT, cam_obj){
             if(jsConfig.active_layers.places) layers.places.material.uniforms.level.value = (1.0-(cam_obj.camera_scale*0.8));
+
+            let places = [];
+            const data = layers.places.userData.td;
+            const scale_d = model.position_marker.scale.x*1.5;
+
+            for (let c = 0; c < layers.places.count; c++) {
+                layers.u.vct.fromArray(data.position[c]);
+                layers.places.localToWorld(layers.u.vct);
+                if (cam_obj.frustum.containsPoint(layers.u.vct)) {
+                    //vc.a.copy(cam_obj.pos);//model.container.position);//.projected);//pos);
+                    // vc.a.copy(model.position_marker.position);
+                    // layers.places.localToWorld(vc.a);
+                    //const d = vc.a.sub(layers.u.vct).length();
+                    const d = layers.u.vct.length();
+                    if(d < scale_d) places.push({'id':c, 'd':d, 'pop':data.sample_raw[c]});
+                }
+            }
+
+
+            places.sort((a, b) => a.pop > b.pop ? -1 : 1);
+
+            for(let i = 0; i < 10; i++){
+                if(i < places.length){
+                    const place = places[i];
+                    layers.u.vct.fromArray(data.position[place.id]);
+                    //layers.places.localToWorld(layers.u.vct);
+                    //model.place_labels[i].line_height = place.d*2.30;//((1-(1/place.d))*48);
+                    //model.place_labels[i].text = DAT.DATA.SD.places[place.id].name; //place.d.toFixed(1)+' '+
+                    model.place_labels[i].object.index = place.id;
+
+                    model.place_labels[i].object.position.set(
+                        layers.u.vct.x-model.center.x,
+                        layers.u.vct.y-model.center.y,
+                        0.0
+                        );
+                    model.place_labels[i].state = true;
+
+                    let raw_name = DAT.DATA.SD.places[place.id].name;
+                    if(raw_name.indexOf('/') !== -1) raw_name = raw_name.split('/');
+
+                    model.place_labels[i].text = Array.isArray(raw_name) ? util.title_case(raw_name[0]) : util.title_case(raw_name);
+                    //place.d.toFixed(1) + ' ' +
+                    model.place_labels[i].size = 10.0+(place['pop']*1.5);
+                    const stem = ((place['pop'])/5.0)*0.25;
+                    model.place_labels[i].stem = stem;
+
+                    //model.place_labels[i].marker_a.position.copy(model.place_labels[i].object.position).setZ(stem);
+
+
+                }else{
+                     model.place_labels[i].state = false;
+                }
+
+                model.place_labels[i].update(cam_obj, model.container);// layers.places);
+
+
+
+
+                //copy(layers.u.vct);//set(-layers.u.vct.x, layers.u.vct.z, 0.0);//copy(layers.u.vct);//set(layers.u.vct.x,layers.u.vct.z,layers.u.vct.y);//set(data.position[place.id].x,data.position[place.id].y,0.0);
+                // model.place_labels[i].object.children[1].scale.setScalar(1.0);
+                // model.place_labels[i].object.children[1].quaternion.copy(cam_obj.camera.quaternion);//lookAt(cam_obj.pos);
+                // model.place_labels[i].object.children[1].updateMatrix();
+                // model.place_labels[i].object.children[1].updateMatrixWorld();
+                //
+                // vc.a.copy(model.place_labels[i].markers[0].position);
+                // model.place_labels[i].object.children[1].localToWorld(vc.a);
+                // vc.a.project(cam_obj.camera);
+                //
+                // vc.a.x = ( (   vc.a.x + 1 ) * model.width  / 2 );
+                // vc.a.y = ( ( - vc.a.y + 1 ) * model.height / 2 );
+                // vc.a.z = 0;
+                //
+                // vc.b.copy(model.place_labels[i].markers[1].position);
+                // model.place_labels[i].object.children[1].localToWorld(vc.b);
+                // vc.b.project(cam_obj.camera);
+                //
+                // vc.b.x = ( (   vc.b.x + 1 ) * model.width  / 2 );
+                // vc.b.y = ( ( - vc.b.y + 1 ) * model.height / 2 );
+                // vc.b.z = 0;
+                //
+                // const rd = vc.a.distanceTo(vc.b);
+                //
+                // model.place_labels[i].text = rd.toFixed(2);// + DAT.DATA.SD.places[place.id].name;
+                // // if(place.d/sco < 1.0){
+                // //
+                // model.place_labels[i].object.children[1].scale.setScalar(1.0/rd);//0.5);//*rd);
+                // model.place_labels[i].object.children[1].updateMatrix();
+                // model.place_labels[i].object.children[1].updateMatrixWorld();
+                // //
+                // // }
+                //
+
+
+                //model.place_labels[i].object.children[1].scale.setScalar(0.5-(1/place.d));
+            }
+
+            //console.log(places[0], places.length);
+            // const test = layers.wudi_points.children[0].userData.td;
+            // const visible = {set: [], wudi_up: [], wudi_down: []};
+            // let in_view_index = 0;
+            //
+            // for (let c = 0; c < test.position.length; c++) {
+            //     const data_index = c;//DAT.DATA.CONF.wudi_index[c];
+            //     layers.u.vct.fromArray(test.mid_position[c]);
+            //     layers.wudi_points.localToWorld(layers.u.vct);
+            //
+            //     if (cam_obj.frustum.containsPoint(layers.u.vct)) {
+            //         visible.set.push([c, data_index, in_view_index]);
+            //         visible.wudi_up.push([DAT.DATA.TD.current[data_index][3]]);
+            //         visible.wudi_down.push([DAT.DATA.TD.current[data_index][4]]);
+            //         in_view_index++;
+            //     }
+            // }
+
+
+
+
+
+
         },
         protected_areas(cam_obj){
-
             if(jsConfig.active_layers.protected_areas) layers.protected_areas.material.uniforms.level.value = (1.0-(cam_obj.camera_scale*0.8));
         }
     }
 }
 
 const model = {
+    outliner: null,
+    position_marker: objects.position_mark(1.0),
+    labels_dom: document.getElementById('model-labels'),
     layers: layers,
+    place_labels: [],
     width: null,
     height: null,
     container: new THREE.Group(),
@@ -599,14 +790,43 @@ const model = {
     dimensions: null,
     center: null,
     camera_map_local: new THREE.Vector3(),
+    // init_vars: null,
     model_position(origin) {
         origin.x = model.natural_bounds[0] + ((model.width / 2) + origin.x);
         origin.z = model.natural_bounds[1] + ((model.height / 2) - origin.z);
     },
+
     init(init_vars) {
+        // model.init_vars = init_vars;
+        for(let i = 0; i< 10; i++){
+            const label = label_maker.dom_label('test-'+i, 'B', model.labels_dom);
+            label.line_height = 96; //#//default
+            label.init();
+            label.object.rotateX(Math.PI / 2);
+            model.container.add(label.object);
+            // model.container.add(label.marker_a);
+            // model.container.add(label.marker_b);
+
+            model.place_labels.push(label);
+        }
+
+        const hex_shape = objects.hexagonal_shape(0.05);
+        hex_shape.deleteAttribute('uv');
+        hex_shape.deleteAttribute('normal');
+
+        model.outliner = new THREE.Group();
+        model.outliner.userData.active = [];
+        const ref_mat = new THREE.MeshBasicMaterial({color: 0xFF0000});
+        const ref_mesh = new THREE.Mesh(hex_shape, ref_mat);
+
+        model.outliner.marker = ref_mesh;
+        model.outliner.add(ref_mesh);
+        model.container.add(model.outliner);
+
 
         const map_min = new THREE.Vector2(jsConfig.bounds[0], jsConfig.bounds[1]);
         const map_max = new THREE.Vector2(jsConfig.bounds[2], jsConfig.bounds[3]);
+
         model.dimensions = new THREE.Vector2();
         model.center = new THREE.Vector2();
         const map_box = new THREE.Box2(map_min, map_max);
@@ -633,8 +853,13 @@ const model = {
         }
 
 
+
         model.container.rotateX(Math.PI / -2);
         model.container.position.set(0,0,0);
+
+        model.container.add(model.position_marker);
+        model.position_marker.visible = false;
+
         model.container.updateMatrix();
         model.container.updateMatrixWorld(true);
 

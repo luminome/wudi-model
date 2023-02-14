@@ -49,7 +49,7 @@ const jsConfig = {
     },
     contours: {
         depth_max: 5000.0,
-        limit_distance: 20.0,
+        limit_distance: 15.0, //20.0,
     },
     mats: {
         mapMarkersMaterial: {
@@ -95,7 +95,7 @@ const jsConfig = {
         contours: {
             type: 'LineBasicMaterial',
             dict: {
-                color: 0x222266,  //222222
+                color: 0x333366,  //222222
             }
         },
         line_strings: {
@@ -153,7 +153,7 @@ const jsConfig = {
     static_path: "", //"/data",
     map_sectors_layers: {
         draw: true,
-        allow: ['polygons', 'depth_maps'], /// 'depth_maps'], //'meshes'], //, ''contours', mpa_s'], //, 'meshes'] 'polygons', 'line_strings',
+        allow: ['polygons', 'depth_maps', 'protected_areas'], /// 'depth_maps'], //'meshes'], //, ''contours', mpa_s'], //, 'meshes'] 'polygons', 'line_strings',
     },
     GENERAL_DEBUG: true,
     MAP_DEBUG: false,

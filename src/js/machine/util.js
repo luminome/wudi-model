@@ -182,6 +182,7 @@ export const projected = (v, camObj, vw, vh) => {
     v.project(camObj);
     v.setX((v.x + 1) * (vw / 2));
     v.setY((v.y - 1) * (vh / -2));
+    // v.setZ(0.0);
 }
 
 export const coords_from_array = (array, add_z = 0.0, two_d = false) => {

@@ -40,7 +40,7 @@ const init_vars = {
                 width:20,
             },
             grid_marks:{
-                on: true,
+                on: false,
                 distance: 25.0,
                 width: 25,
                 pitch: 2.0,
@@ -52,7 +52,7 @@ const init_vars = {
                 on: false,
             },
             tools:{
-                on: true,
+                on: false,
             },
             position_lines:{
                 on: false,
@@ -327,8 +327,10 @@ const graph_component = {
                 mean: [[mean[0] / max_len], [mean[1] / max_len]],
                 data: aggregate_avg,
                 up_color: up_col+'CC', //vars.colors.hex_css(up_col,0.5),
+                up_color_text: jsConfig.colors.up_welling_text, //vars.colors.hex_css(up_col,0.5),
                 up_color_select: up_col,
                 down_color: dn_col+'CC',
+                down_color_text: jsConfig.colors.down_welling_text,
                 down_color_select: dn_col,
                 x_range_start: ref_style === 'all' ? 1978 : 1,
                 graph_style: ref_style,
@@ -1265,7 +1267,7 @@ const interactive = {
             }
 
             for(let u of jsConfig.wudi_type_array){
-                const col = jsConfig.colors[u.item];
+                const col = jsConfig.colors[u.item+'_text'];
                 const stat = util.r_sum(stats[u.label], stats.times.length);
                 labels.push(`<span style="font-family:heavy_data_bold, sans-serif; color:${col}">${stat} ${u.label}-days</span>`);
             }
@@ -1666,6 +1668,7 @@ init_vars.trace.log('components loaded', 'ok');
 window.addEventListener('DOMContentLoaded', (event) => {
     //console.log('model-base loaded. continuing');
     init_vars.trace.log(runtime_timer.var_name, util.formatMs(runtime_timer.stop()));
+
 
     MDL.init(init_vars);
 

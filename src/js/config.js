@@ -3,6 +3,8 @@ const jsConfig = {
     colors: {
         up_welling:'#0000FF',
         down_welling:'#FF0000',
+        up_welling_text:'#6666FF',
+        down_welling_text:'#FF6666',
         mpa_s_designated:'#00FF00',
         mpa_s_proposed:'#00CC00',
         places:'#FFFF00',

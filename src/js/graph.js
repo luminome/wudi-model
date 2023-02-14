@@ -39,6 +39,7 @@ class Bar {
 		this.data = data;
 		this.color = Math.sign(data) > 0 ? g.vis.bar_up : g.vis.bar_down;
 		this.color_select = Math.sign(data) > 0 ? g.vis.bar_up_select : g.vis.bar_down_select;
+		this.color_text = Math.sign(data) > 0 ? g.vis.bar_up_text : g.vis.bar_down_text;
 		this.rect = {x:(x),y:(y),x2:(x+w),y2:(y+h),w:(w-1),h:(h)};
 		this.special = null;
 		this.updown = Math.sign(data);
@@ -281,7 +282,7 @@ function graph_event(e){
 
 		let kf = '';
 		g.bars_array.filter(b => b.id === rx).map(b=>{
-			if(b.data) kf += `<div style="color:${b.color_select}">${g.style === 'month' ? b.data:Math.abs(b.data)}</div>`;
+			if(b.data) kf += `<div style="color:${b.color_text}">${g.style === 'month' ? b.data:Math.abs(b.data)}</div>`; //
 			b.draw(_ctx,'selected');
 			//kf += `<span>${b.rect.w}</span>`;
 		})
@@ -338,8 +339,10 @@ function graph(graph_obj, w, h, context){
 
 	g.vis.bar_up = graph_obj.up_color;
 	g.vis.bar_up_select = graph_obj.up_color_select;
+	g.vis.bar_up_text = graph_obj.up_color_text;
 	g.vis.bar_down = graph_obj.down_color;
 	g.vis.bar_down_select = graph_obj.down_color_select;
+	g.vis.bar_down_text = graph_obj.down_color_text;
 
 	g.x_range_start = graph_obj.x_range_start;
 	g.wudi_th_up = graph_obj.wudi_th_up;

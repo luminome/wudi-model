@@ -820,6 +820,7 @@ const model = {
         const ref_mesh = new THREE.Mesh(hex_shape, ref_mat);
 
         model.outliner.marker = ref_mesh;
+        model.outliner.marker.visible = false;
         model.outliner.add(ref_mesh);
         model.container.add(model.outliner);
 

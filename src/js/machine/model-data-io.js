@@ -117,6 +117,13 @@ const DATA = {
                 }
             }
 
+            // console.log('get_points', ...post_obj.list);
+            //
+            // Object.keys(DATA.TD.point_cache).map(t=>{
+            //     console.log(t);
+            // })
+
+
             if (post_obj.list.length > 0) {
                 modelDataIo.REQ.post_method_load(post_obj).then(r => modelDataIo.REQ.complete(r));
             } else {
@@ -130,6 +137,8 @@ const DATA = {
         },
         set_points(resource){
             resource.list.forEach(obj => {
+                // console.log('set_points', obj);
+
                 const request_length = obj.special.length; ///number of points per time.
                 const asset_raw_length = obj.raw.data.length;
                 const general_length = asset_raw_length / request_length;

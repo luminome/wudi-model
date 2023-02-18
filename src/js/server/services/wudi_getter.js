@@ -6,7 +6,7 @@ const db = require('../services/wudi_db');
 
 function get_all(query = null) {
     try {
-        if (query.table === 'turn_table') {
+        if (query.table === 'wudi_points') {
             const meta = {};
             const data = db.query(`SELECT *, rowid
                                    FROM wudi_points

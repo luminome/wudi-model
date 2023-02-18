@@ -105,10 +105,19 @@ const page = {
         });
 
         [...model_controls.querySelectorAll('.control-button')].map(cd =>{
+
             const control_item = cd.cloneNode(true);
             const target = instructions_slide.querySelectorAll('.icon-'+control_item.id)[0];
             control_item.className = "";
             control_item.classList.add('instructions-icon');
+
+            if(jsConfig.hasOwnProperty(control_item.id+'_default')) {
+
+                const has_state = jsConfig[control_item.id+'_default'];
+                console.log(has_state, control_item.id);
+                if(has_state) cd.classList.add('control-toggle');
+            }
+
             control_item.removeAttribute('id');
             target.prepend(control_item);
         });

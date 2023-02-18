@@ -3,6 +3,7 @@ import * as util from "./machine/util";
 import jsConfig from './config';
 import label_maker from "./machine/ui-labels";
 import {controls as CTL} from "./machine/ui-controls";
+import {uiCameraDolly as CAM} from "./machine/ui-camera-dolly";
 
 const objects = {
     hexagonal_shape(scale = 1.0) {
@@ -47,157 +48,209 @@ const objects = {
         line.computeLineDistances();
         //line.rotateX(Math.PI / 2);
         return line;
+    },
+    ray(){
+        const pts = [
+            0,0,0,
+            0,0,0
+        ];
+        const line_pos = Float32Array.from(pts);//, z => z*0.5);
+        const t_geometry = new THREE.BufferGeometry();
+        t_geometry.setAttribute('position', new THREE.BufferAttribute(line_pos, 3));
+        const t_material = new THREE.LineBasicMaterial({
+            color: 0xFFFF00
+        });
+        return new THREE.Line(t_geometry, t_material);
+    },
+    squid(){
+        const o = 0.5;
+        const n = jsConfig.bar_scale_width*o;
+        const kvc = [
+            0,1,
+            1,2,
+            2,3,
+            3,0,
+            4,5,
+            5,6,
+            6,7,
+            7,4,
+            0,4,
+            1,5,
+            2,6,
+            3,7
+        ]
+
+        const pvc = [
+            -o,n,1,
+            o,n,1,
+            o,-n,1,
+            -o,-n,1,
+            -o,n,1,
+            o,n,1,
+            o,-n,1,
+            -o,-n,1,
+        ]
+
+        const prc = [];
+        for(let i = 0; i < kvc.length; i += 2){
+            prc.push(pvc[kvc[i]*3], pvc[kvc[i]*3+1], pvc[kvc[i]*3+2], pvc[kvc[i+1]*3], pvc[kvc[i+1]*3+1], pvc[kvc[i+1]*3+2]);
+        }
+
+        const line_pos = Float32Array.from(prc);
+        const t_geometry = new THREE.BufferGeometry();
+        t_geometry.setAttribute('position', new THREE.BufferAttribute(line_pos, 3));
+        const t_material = new THREE.LineBasicMaterial({
+            transparent: true,
+            opacity:0.35,
+            color: 0xFFFFFF,
+            blending: THREE.AdditiveBlending,
+            depthTest: false,
+            depthWrite: false,
+        });
+        return {
+            object: new THREE.LineSegments( t_geometry, t_material ),
+            vertices: pvc,
+            indices: kvc
+        };
     }
 }
 
-/*
-const wudi_selector = {
-    object: new THREE.Group(),
-    line_material: new THREE.LineBasicMaterial({color: vars.colors.dub_selecta}),
-    buff: new Float32Array([1,0,0,-1,0,0]),
-    geom: null,
-    mark: [],
-    dub_line: null,
-    dub_box: null,
-    dub_pos: new THREE.Vector3(),
-    make: (e) => {
-        wudi_dub_selecta.geom = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(wudi_dub_selecta.buff, 3));
-        // wudi_dub_selecta.dub_line = new THREE.LineSegments(wudi_dub_selecta.geom, wudi_dub_selecta.line_material);
-        // for(let c=0;c<2;c++) {
-        //     const ref_geom = make_hexagonal_shape(0.01);
-        //     const ref_mat = new THREE.MeshBasicMaterial({color: vars.colors.dub_selecta});
-        //     ref_marker = new THREE.Mesh(ref_geom, ref_mat);
-        //     ref_marker.rotateX(Math.PI / -2);
-        //     wudi_dub_selecta.mark.push(ref_marker);
-        //     wudi_dub_selecta.object.add(ref_marker);
-        // }
 
-        //const box_geometry = new THREE.BoxBufferGeometry(1, vars.bar_scale_width, 1);
+function point_selector(){
 
-        // const presto = new Float32Array([
-        //     -0.1,0,0,
-        //     -0.1,0,1.1,
-        //     1.1,0,1.1,
-        //     1.1,0,0,
-        //     -0.1,0,0
-        // ]);
+    function init(){
+        P.object.add(P.marker);
+        P.object.add(P.ray);
+        P.object.add(P.offest_ray);
+        P.object.add(P.top_arr.object);
+        P.label.init();
+        P.object.add(P.label.object);
+        P.set();
 
-        // const presto = new Float32Array([
-        //     -0.5,0.1,-0.5,
-        //     0.5,0.1,-0.5,
-        //     0.5,0.1,0.5,
-        //     -0.5,0.1,0.5,
-        //     -0.4,0.1,-0.4,
-        //     0.4,0.1,-0.4,
-        //     0.4,0.1,0.4,
-        //     -0.4,0.1,0.4,
-        //     -0.5,-0.1,-0.5,
-        //     0.5,-0.1,-0.5,
-        //     0.5,-0.1,0.5,
-        //     -0.5,-0.1,0.5,
-        //     -0.4,-0.1,-0.4,
-        //     0.4,-0.1,-0.4,
-        //     0.4,-0.1,0.4,
-        //     -0.4,-0.1,0.4
-        // ]);
+        P.marker.visible = false;
+        P.ray.visible = false;
+        P.offest_ray.visible = false;
+        P.label.object.visible = false;
+        return P
+    }
 
-        // const ref_mat = new THREE.PointsMaterial({color: vars.colors.dub_selecta, size:0.05});
-        // const box_geometry = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(presto, 3));
-        // const ref_mat = new THREE.LineBasicMaterial({color: vars.colors.dub_selecta, linewidth:10});
-        // const box_geometry = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(presto, 3));
-        //box_geometry.translate(0.5, 0.0, 0.5);
-        const ref_mat = new THREE.MeshBasicMaterial({
-            color: 0xFFFFFF,
-            transparent: true,
-            opacity: 0.5,
-            blending: THREE.NormalBlending,  //SubtractiveBlending,//AdditiveBlending, //AdditiveBlending, //THREE.NormalBlending, //
-            depthWrite: false,
-            depthTest: false
-        });
-        const box_geometry = new THREE.BoxBufferGeometry(1, vars.bar_scale_width, 1);
-        box_geometry.deleteAttribute('uv');
-        box_geometry.deleteAttribute('normal');
-        box_geometry.translate(0.5, 0.0, 0.5);
-        // wudi_dub_selecta.dub_box = new THREE.Line(box_geometry, wudi_dub_selecta.line_material);
-        wudi_dub_selecta.dub_box = new THREE.Mesh(box_geometry, ref_mat);
-        // wudi_dub_selecta.dub_box = new THREE.Points(box_geometry, ref_mat);
-        // wudi_dub_selecta.dub_box = new THREE.Mesh(box_geometry, ref_mat);
-        // before doing any updates, ensure the local matrix is set from postion/quaternion/scale:
-        wudi_dub_selecta.dub_box.updateMatrix();
-        wudi_dub_selecta.dub_box.userData.originalMatrix = wudi_dub_selecta.dub_box.matrix.clone();
+    function set(dir = null, offset = null, pos = null){
+        if(dir !== null) P.direction.copy(dir);
+        if(offset !== null) P.offset_direction.copy(offset);
+        if(pos !== null) P.object.position.set(pos.x-model.center.x, pos.y-model.center.y, pos.z);
 
-        map_container.add(wudi_dub_selecta.dub_box);
+        util.set_buffer_at_index(P.ray.geometry.attributes.position.array, 1, P.direction.toArray());
+        P.ray.geometry.attributes.position.needsUpdate = true;
+        util.set_buffer_at_index(P.offest_ray.geometry.attributes.position.array, 1, P.offset_direction.toArray());
+        P.offest_ray.geometry.attributes.position.needsUpdate = true;
+    }
 
-        // wudi_dub_selecta.object.add(wudi_dub_selecta.dub_line);
-        wudi_dub_selecta.dub_box.visible = false;
+    function update(){
+        const new_points = [];
+        const index = P.selection.wudi_points;
+        if(!index) return;
+        //down_welling
+        model.layers.wudi_points.children[0].getMatrixAt(index, P.mat);
+        P.mat.decompose(P.utl, P.quat, P.sca);
+        for(let t = 0; t < 4; t++){
+            vc.a.fromArray(util.get_buffer_at_index(P.top_arr.vertices, t));
+            vc.a.set(vc.a.x*P.sca.x,vc.a.y*P.sca.y,vc.a.z*P.sca.z);
+            vc.a.applyQuaternion(P.quat);
+            new_points.push(vc.a.toArray());
+        }
 
-        // scene.add(wudi_dub_selecta.object);
-    },
-    rescale:(index, up, down) =>{
-        const wudi_up = scene.getObjectByName('wudi_up');
-        wudi_up.getMatrixAt(index, mu);
-        mu.decompose(vw, qu, vu);
-        wudi_dub_selecta.dub_box.position.set(vw.x, vw.y, down*-1);
-        wudi_dub_selecta.dub_box.setRotationFromQuaternion(qu);
-        wudi_dub_selecta.dub_box.scale.set(vu.x,vu.y,up+down);
-        wudi_dub_selecta.dub_box.geometry.attributes.position.needsUpdate = true;
-        wudi_dub_selecta.dub_box.geometry.computeBoundingBox();
-        wudi_dub_selecta.dub_box.geometry.computeBoundingSphere();
-    },
-    // set: (p1, p2) =>{
-    //
-    //     const position = wudi_dub_selecta.geom.getAttribute('position');
-    //     position.setXYZ(0, p1.x,p1.y,p1.z);
-    //     position.setXYZ(1, p2.x,p2.y,p2.z);
-    //     wudi_dub_selecta.geom.attributes.position.needsUpdate = true;
-    //     wudi_dub_selecta.dub_line.geometry.computeBoundingSphere();
-    //     for(let c=0;c<2;c++) {
-    //         wudi_dub_selecta.mark[c].position.set(position.array[c * 3], position.array[c * 3 + 1], position.array[c * 3 + 2]);
-    //     }
-    // },
-    set_from_point: (pid) =>{
-        wudi_dub_selecta.dub_box.visible = true;
-        const t_ref = scene.getObjectByName('ref_mark');
-        t_ref.visible = false;
-        const ref_point = vars.data.wudi_index.indexOf(pid);
+        //up_welling
+        model.layers.wudi_points.children[1].getMatrixAt(index, P.mat);
+        P.mat.decompose(P.utl, P.quat, P.sca);
+        for(let t = 4; t < 8; t++){
+            vc.a.fromArray(util.get_buffer_at_index(P.top_arr.vertices, t));
+            vc.a.set(vc.a.x*P.sca.x,vc.a.y*P.sca.y,vc.a.z*P.sca.z);
+            vc.a.applyQuaternion(P.quat);
+            new_points.push(vc.a.toArray());
+        }
 
-        const wudi_down = scene.getObjectByName('wudi_down');
-        wudi_down.getMatrixAt(ref_point, mu);
-        mu.decompose(vw, qu, vu);
-        const down = vu.z;
+        P.top_arr.indices.map((i, n) =>{
+            util.set_buffer_at_index(P.top_arr.object.geometry.attributes.position.array, n, new_points[i]);
+        })
 
-        const wudi_up = scene.getObjectByName('wudi_up');
-        wudi_up.getMatrixAt(ref_point, mu);
-        mu.decompose(vw, qu, vu);
-        const up = vu.z;
+        P.top_arr.object.geometry.attributes.position.needsUpdate = true;
+        P.top_arr.object.geometry.computeBoundingSphere();
+        P.top_arr.object.geometry.computeBoundingBox();
+    }
 
-        wudi_dub_selecta.dub_box.position.set(vw.x, vw.y, down*-1);
-        wudi_dub_selecta.dub_box.setRotationFromQuaternion(qu);
-        wudi_dub_selecta.dub_box.scale.set(vu.x,vu.y,up+down);
+    function select(type, dict, DAT, cam_obj){
+        if(dict.bump && P.selection[type]) P.selection[type] += dict.bump;
+        if(dict.index) P.selection[type] = dict.index;
+        const point = DAT.DATA.SD[type][P.selection[type]];
 
-        const pt = vars.data.wudi_points.raw.data[ref_point];
+        if(type === 'wudi_points'){
+            P.top_arr.object.visible = true;
+            vc.a.set(point.A_lon, point.A_lat, 0.0);
+            vc.b.set(point.B_lon, point.B_lat, 0.0);
+            vc.c.subVectors(vc.a, vc.b).multiplyScalar(0.5).add(vc.b);
+            vc.d.subVectors(vc.a, vc.b);
+            vc.e.crossVectors(vc.d, vc.up);
+            vc.a.copy(cam_obj.pos).sub(cam_obj.camera.up);
+            vc.b.set(-vc.a.x, vc.a.z, 0.0).normalize().negate();
+            vc.a.crossVectors(vc.b, vc.up);
+            P.set(vc.e, vc.b, vc.c);
+            P.offset_angle = P.direction.angleTo(vc.b)*Math.sign(vc.a.dot(vc.e));
+            P.update();
+        }else{
+            P.top_arr.object.visible = false;
+            if(type === 'protected_areas') vc.a.set(point.CENTROID[0] * 1.0, point.CENTROID[1] * 1.0, 0.0);
+            if(type === 'places') vc.a.set(point.lon * 1.0, point.lat * 1.0, 0.0);
+            vc.b.set(vc.a.x - model.center.x, vc.a.y - model.center.y, 0.0);
+            vc.c.copy(vc.a);
+            vc.a.set(-model.container.parent.position.x, model.container.parent.position.z, 0.0);
+            vc.e.copy(vc.b).negate().add(vc.a);
+            vc.a.copy(cam_obj.pos).sub(cam_obj.camera.up);
+            vc.b.set(-vc.a.x, vc.a.z, 0.0).normalize().negate();
+            vc.a.crossVectors(vc.b, vc.up);
+            P.set(vc.e, vc.b, vc.c);
+            P.offset_angle = P.direction.angleTo(vc.b) * Math.sign(vc.a.dot(vc.e));
+        }
 
-        vw.set(pt[1],pt[0],0.0);
-        vk.set(pt[5],pt[4],0.0);
-        vu.subVectors(vk,vw);
-        vc.crossVectors(vu,z_in).normalize().multiplyScalar(-0.1);
-        vc.add(vu.multiplyScalar(0.5).add(vw));
-        //
-        map_container.localToWorld(vc);
-        // t_ref.position.copy(vc);
-        // t_ref.visible = true;
-        map_container.localToWorld(vw);
-        map_container.localToWorld(vk);
+        P.label.text = util.rad_to_deg(P.offset_angle).toFixed(2)+'º';
+        P.label.update();
 
-        vw.set(pt[3],pt[2],0.0);
-        vu.copy(vw);
-        map_container.localToWorld(vu);
-        wudi_dub_selecta.dub_pos.copy(vw);
 
-        return [vc.clone(), vw.clone()];
-    },
+        return P.selection[type];
+    }
+
+    function move_to(dolly_obj, z = 1.0){
+        vc.a.copy(P.object.position);
+        vc.b.set(vc.a.x, 0.0, -vc.a.y);
+        dolly_obj.mover.set_target(dolly_obj.mover.pos, vc.b, z);
+        dolly_obj.mover.set_rotation_target(P.offset_angle, true);
+        return true;
+    }
+
+    const P = {
+        selection:{},
+        selected_index: null,
+        mat: new THREE.Matrix4(),
+        quat: new THREE.Quaternion(),
+        sca: new THREE.Vector3(),
+        utl: new THREE.Vector3(),
+        top_arr: objects.squid(),
+        offset_angle: 0.0,
+        label: label_maker.label('hello'),
+        direction: new THREE.Vector3(0,2,0),
+        offset_direction: new THREE.Vector3(0,2,0),
+        marker: objects.position_mark(0.5),
+        ray: objects.ray(),
+        offest_ray: objects.ray(),
+        object: new THREE.Object3D(),
+        init,
+        set,
+        select,
+        update,
+        move_to
+    }
+
+    return P
 }
-*/
 
 const vc = {
     a: new THREE.Vector3(0, 0, 0),
@@ -244,7 +297,6 @@ const layers = {
                     i_mesh.setColorAt(index, layers.u.color.clone());
                     i_mesh.instanceColor.needsUpdate = true;
                 }
-
             }
         }
     },
@@ -599,13 +651,13 @@ const layers = {
     },
     update: {
         wudi_points(DAT, cam_obj) {
-            //#// PERVY make based on distance to camera as well.
+            //#make based on distance to camera as well.
             const test = layers.wudi_points.children[0].userData.td;
             const visible = {set: [], wudi_up: [], wudi_down: []};
             let in_view_index = 0;
 
             for (let c = 0; c < test.position.length; c++) {
-                const data_index = c;//DAT.DATA.CONF.wudi_index[c];
+                const data_index = c;
                 layers.u.vct.fromArray(test.mid_position[c]);
                 layers.wudi_points.localToWorld(layers.u.vct);
 
@@ -628,15 +680,18 @@ const layers = {
                     layers.u.mat.decompose(layers.u.vct, layers.u.qua, layers.u.vct2);
 
                     const wv = visible[i_mesh.name][v[2]][0];
-                    const value = lim[2] === 0 || wv === 0 ? (0.0001) : (wv / lim[2]*sign);
+                    let value = lim[2] === 0 || wv === 0 ? (0.0001) : (wv / lim[2]*sign);
 
                     let color_value = lim[0] === 0 || wv === 0 ? (0.0001) : (wv / lim[0]*sign);
                     layers.data.wudi_point.color_adaptive[i_mesh.name][v[0]] = color_value;
                     layers.u.color.fromArray(layers.data.wudi_point.color_processed(v[0], i_mesh.userData.td.base_color, color_value));
                     i_mesh.setColorAt(v[0], layers.u.color.clone());
 
+                    if(Math.abs(value) === 0) value = Math.sign(value);
+
                     layers.u.vct2.setZ(value * jsConfig.bar_scale);
                     layers.u.vct2.setY((1 - cam_obj.camera_scale) * jsConfig.bar_scale_width);
+
                     layers.u.mat.compose(layers.u.vct, layers.u.qua, layers.u.vct2);
                     i_mesh.setMatrixAt(v[0], layers.u.mat);
                 }
@@ -646,6 +701,8 @@ const layers = {
                 i_mesh.instanceMatrix.needsUpdate = true;
                 i_mesh.instanceColor.needsUpdate = true;
             }
+
+            model.point_selector.update();
         },
         places(DAT, cam_obj){
             if(jsConfig.active_layers.places) layers.places.material.uniforms.level.value = (1.0-(cam_obj.camera_scale*0.8));
@@ -667,18 +724,13 @@ const layers = {
                 }
             }
 
-
             places.sort((a, b) => a.pop > b.pop ? -1 : 1);
 
             for(let i = 0; i < 10; i++){
                 if(i < places.length){
                     const place = places[i];
                     layers.u.vct.fromArray(data.position[place.id]);
-                    //layers.places.localToWorld(layers.u.vct);
-                    //model.place_labels[i].line_height = place.d*2.30;//((1-(1/place.d))*48);
-                    //model.place_labels[i].text = DAT.DATA.SD.places[place.id].name; //place.d.toFixed(1)+' '+
                     model.place_labels[i].object.index = place.id;
-
                     model.place_labels[i].object.position.set(
                         layers.u.vct.x-model.center.x,
                         layers.u.vct.y-model.center.y,
@@ -690,59 +742,15 @@ const layers = {
                     if(raw_name.indexOf('/') !== -1) raw_name = raw_name.split('/');
 
                     model.place_labels[i].text = Array.isArray(raw_name) ? util.title_case(raw_name[0]) : util.title_case(raw_name);
-                    //place.d.toFixed(1) + ' ' +
                     model.place_labels[i].size = 10.0+(place['pop']*1.5);
                     const stem = ((place['pop'])/5.0)*0.25;
                     model.place_labels[i].stem = stem;
-
-                    //model.place_labels[i].marker_a.position.copy(model.place_labels[i].object.position).setZ(stem);
-
 
                 }else{
                      model.place_labels[i].state = false;
                 }
 
-                model.place_labels[i].update(cam_obj, model.container);// layers.places);
-
-
-
-
-                //copy(layers.u.vct);//set(-layers.u.vct.x, layers.u.vct.z, 0.0);//copy(layers.u.vct);//set(layers.u.vct.x,layers.u.vct.z,layers.u.vct.y);//set(data.position[place.id].x,data.position[place.id].y,0.0);
-                // model.place_labels[i].object.children[1].scale.setScalar(1.0);
-                // model.place_labels[i].object.children[1].quaternion.copy(cam_obj.camera.quaternion);//lookAt(cam_obj.pos);
-                // model.place_labels[i].object.children[1].updateMatrix();
-                // model.place_labels[i].object.children[1].updateMatrixWorld();
-                //
-                // vc.a.copy(model.place_labels[i].markers[0].position);
-                // model.place_labels[i].object.children[1].localToWorld(vc.a);
-                // vc.a.project(cam_obj.camera);
-                //
-                // vc.a.x = ( (   vc.a.x + 1 ) * model.width  / 2 );
-                // vc.a.y = ( ( - vc.a.y + 1 ) * model.height / 2 );
-                // vc.a.z = 0;
-                //
-                // vc.b.copy(model.place_labels[i].markers[1].position);
-                // model.place_labels[i].object.children[1].localToWorld(vc.b);
-                // vc.b.project(cam_obj.camera);
-                //
-                // vc.b.x = ( (   vc.b.x + 1 ) * model.width  / 2 );
-                // vc.b.y = ( ( - vc.b.y + 1 ) * model.height / 2 );
-                // vc.b.z = 0;
-                //
-                // const rd = vc.a.distanceTo(vc.b);
-                //
-                // model.place_labels[i].text = rd.toFixed(2);// + DAT.DATA.SD.places[place.id].name;
-                // // if(place.d/sco < 1.0){
-                // //
-                // model.place_labels[i].object.children[1].scale.setScalar(1.0/rd);//0.5);//*rd);
-                // model.place_labels[i].object.children[1].updateMatrix();
-                // model.place_labels[i].object.children[1].updateMatrixWorld();
-                // //
-                // // }
-                //
-
-
-                //model.place_labels[i].object.children[1].scale.setScalar(0.5-(1/place.d));
+                model.place_labels[i].update(cam_obj, model.container);
             }
 
             //console.log(places[0], places.length);
@@ -775,8 +783,12 @@ const layers = {
     }
 }
 
+
+
 const model = {
+    point_selector: point_selector().init(),
     outliner: null,
+    user_position_marker: objects.position_mark(0.1),
     position_marker: objects.position_mark(1.0),
     labels_dom: document.getElementById('model-labels'),
     layers: layers,
@@ -806,7 +818,6 @@ const model = {
             model.container.add(label.object);
             // model.container.add(label.marker_a);
             // model.container.add(label.marker_b);
-
             model.place_labels.push(label);
         }
 
@@ -824,6 +835,8 @@ const model = {
         model.outliner.add(ref_mesh);
         model.container.add(model.outliner);
 
+        model.container.add(model.point_selector.object);
+        model.point_selector.object.visible = true;
 
         const map_min = new THREE.Vector2(jsConfig.bounds[0], jsConfig.bounds[1]);
         const map_max = new THREE.Vector2(jsConfig.bounds[2], jsConfig.bounds[3]);
@@ -860,6 +873,9 @@ const model = {
 
         model.container.add(model.position_marker);
         model.position_marker.visible = false;
+
+        model.container.add(model.user_position_marker);
+        model.user_position_marker.visible = false;
 
         model.container.updateMatrix();
         model.container.updateMatrixWorld(true);

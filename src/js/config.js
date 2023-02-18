@@ -5,14 +5,15 @@ const jsConfig = {
         down_welling:'#FF0000',
         up_welling_text:'#6666FF',
         down_welling_text:'#FF6666',
-        mpa_s_designated:'#00FF00',
-        mpa_s_proposed:'#00CC00',
+        mpa_s_designated:'#00EE00',
+        mpa_s_proposed:'#00AA00',
         places:'#FFFF00',
         iso_bath:'#CCCCCC',
         info_bk_opacity: 0.85,
         window: '#1D2733',
         window_overlay: '#1D2733CC',
-        view_elements: '#666666',
+        view_elements: '#CCCCCC',
+        view_elements_text: '#AAAAAA',
         contours: {
             select: [0x4444CC, 0x4444CC]
         },
@@ -120,7 +121,7 @@ const jsConfig = {
                 {"url": "/map", "table": "places", "type": "json-ser", "name": "places", "style":"point", "tck": [0, 0, 0], "geom_index": 11},
                 {"url": "/map", "table": "protected_areas", "type": "json-ser", "name": "protected_areas", "style":"point", "tck": [0, 0, 0]},
                 {"url": "/map", "table": "geo_associations", "type": "json-ser", "name": "wudi_assoc", "tck": [0, 0, 0]},
-                {"url": "/wudi", "table": "turn_table", "type": "json-ser", "name": "wudi_points", "tck": [0, 0, 0]},
+                {"url": "/wudi", "table": "wudi_points", "type": "json-ser", "name": "wudi_points", "tck": [0, 0, 0]},
                 {"url": "/wudi", "tim": "40", "type": "json-ser", "name": "wudi_temporal_data", "tck": [0, 0, 40]},
             ],
         },
@@ -155,7 +156,7 @@ const jsConfig = {
     static_path: "", //"/data",
     map_sectors_layers: {
         draw: true,
-        allow: ['polygons', 'depth_maps', 'protected_areas'], /// 'depth_maps'], //'meshes'], //, ''contours', mpa_s'], //, 'meshes'] 'polygons', 'line_strings',
+        allow: ['polygons', 'line_strings', 'depth_maps', 'protected_areas'], /// 'depth_maps'], //'meshes'], //, ''contours', mpa_s'], //, 'meshes'] 'polygons', 'line_strings',
     },
     GENERAL_DEBUG: true,
     MAP_DEBUG: false,
@@ -203,7 +204,9 @@ const jsConfig = {
         protected_areas: false,
         iso_bath: true
     },
-    data_source_masked_indices: true
+    data_source_masked_indices: true,
+    camera_auto_rotate_default: true,
+    protected_areas_default: true,
 }
 
 export default jsConfig

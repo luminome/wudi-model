@@ -59,6 +59,7 @@ const DATA = {
             DATA.TD.current = new_normals;
             DATA.TD.aggregate = new_aggregated;
 
+            //console.log(DATA.TD.aggregate);
             modelDataIo.init_vars.trace.log('temporal_data_process recalculated', caller);
         }
     },

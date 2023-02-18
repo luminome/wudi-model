@@ -596,6 +596,13 @@ a.darklink:visited{
 	block-size: fit-content;
 }
 
+.info-style .info-stem{
+	position: absolute;
+	border-left: 1px white dotted;
+	width:1px;
+	height:45px;
+}
+
 .info-text:not(.info-table) span{
 	display: block;
 	max-width: 220px;

@@ -53,7 +53,11 @@ function init(){
 
     environment.dom.appendChild(renderer.domElement);
     environment.vars.dom = renderer.domElement;
+
+
+
     scene.add(environment.vars.model);
+    // scene.add(environment.arrow);
     //environment.vars.model.updateMatrixWorld();
     //environment.controls.cam.run();
 }
@@ -146,6 +150,8 @@ function post_init() {
                 1,0,0,
                 0,0,-1,
                 0,0,1,
+                0,0,0,
+                0,-1,0,
             ]
 
             const geometry = new THREE.BufferGeometry();
@@ -484,6 +490,7 @@ export const environment = {
     frame: 0,
     fps: 0,
     init(dom, controls, vars){
+        // environment.arrow = new THREE.ArrowHelper();
         environment.controls = controls;
         environment.vars = vars;
         environment.dom = dom;

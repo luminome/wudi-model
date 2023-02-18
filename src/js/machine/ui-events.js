@@ -36,6 +36,7 @@ function keys_event(raw_keys_arr, o){
     }
     o.keys.previous = [...o.keys.active];
     if(o.update_function !== null) o.update_function('keys');
+    return true;
 }
 
 function screen_event(type, o){
@@ -120,7 +121,7 @@ function screen_event(type, o){
     }
 
     if(o.update_function !== null) o.update_function('screen');
-
+    return true;
 }
 
 export const events = {

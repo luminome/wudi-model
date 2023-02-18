@@ -36,6 +36,7 @@ const label_maker = {
             L.dom_element.style['color'] = '#FFFF00';
             L.dom_element.style.pointerEvents = 'none';
             L.dom_element.innerHTML = L.text;
+            L.dom_element.style.display = 'none';
             dom.appendChild(L.dom_element);
 
             //const ref_geom = objects.hexagonal_shape(0.01);///object.level);
@@ -68,12 +69,13 @@ const label_maker = {
             L.line.name = 'place_label';
             L.marker_c.name = 'place_label';
 
+            L.state = false;
+
         }
 
         function update(cam_obj, layer){
             L.object.visible = L.state;
             L.dom_element.style.display = ['none','block'][+L.state];
-
             L.marker_c.quaternion.copy(cam_obj.camera.quaternion);
 
             if(L.state) {
@@ -198,7 +200,7 @@ const label_maker = {
 
             L.update();
             L.object = new THREE.Group();
-            L.object_mesh = new THREE.Group();
+            //L.object_mesh = new THREE.Group();
             //#//Vector line based ticks handler;
             if(L.tick !== null) {
                 let k_flo;
@@ -235,25 +237,25 @@ const label_maker = {
                 L.object.add(L.line);
             }
 
-            const kn = [[0,0.1,0.0], [0,-0.1,0.0]];
-            for(let n=0; n < 2; n++){
-                //const label = label_depth.labels[n];
-                //console.log(label_depth.d, label[0], label[1]);
-                //console.log(label_depth.d, label[0], label[1]);
-                const ref_geom = objects.hexagonal_shape(0.1);///object.level);
-                const ref_mat = new THREE.MeshBasicMaterial({
-                    transparent: true,
-                    opacity:0.7,
-                    color: 0xFF0000,
-                    depthWrite: false,
-                    depthTest: false,
-                });
-                const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
-                ref_marker.position.set(kn[n][0],kn[n][1],kn[n][2]);//copy(map.vc.a);
-                L.markers.push(ref_marker);
-                //contours.add(ref_marker);
-                L.object_mesh.add(ref_marker);
-            }
+            // const kn = [[0,0.1,0.0], [0,-0.1,0.0]];
+            // for(let n=0; n < 2; n++){
+            //     //const label = label_depth.labels[n];
+            //     //console.log(label_depth.d, label[0], label[1]);
+            //     //console.log(label_depth.d, label[0], label[1]);
+            //     const ref_geom = objects.hexagonal_shape(0.1);///object.level);
+            //     const ref_mat = new THREE.MeshBasicMaterial({
+            //         transparent: true,
+            //         opacity:0.7,
+            //         color: 0xFF0000,
+            //         depthWrite: false,
+            //         depthTest: false,
+            //     });
+            //     const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
+            //     ref_marker.position.set(kn[n][0],kn[n][1],kn[n][2]);//copy(map.vc.a);
+            //     L.markers.push(ref_marker);
+            //     //contours.add(ref_marker);
+            //     L.object_mesh.add(ref_marker);
+            // }
 
 
             L.texture = new THREE.Texture(L.canvas);
@@ -271,8 +273,8 @@ const label_maker = {
             });
 
             L.mesh = new THREE.Mesh(l_geometry, l_material);
-            L.object_mesh.add(L.mesh);
-            L.object.add(L.object_mesh);
+            // L.object_mesh.add(L.mesh);
+            L.object.add(L.mesh);
 
         }
         const L = {

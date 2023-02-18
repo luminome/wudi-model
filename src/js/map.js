@@ -466,6 +466,8 @@ class Sector {
             geometry.scale(1,1,1);///jsConfig.contours.depth_max);
 
             const mesh = new THREE.Mesh(geometry, meshes_material);
+            mesh.userData.is_depth_map = true;
+
             //mesh.position.set(0.0,0.0,-0.01);
         //     object.raw.map(obj => {
         //         //console.log(obj, obj.indices.length, obj.vertices.length/3);
@@ -760,7 +762,7 @@ const map = {
     },
     init(model){
         if(!jsConfig.map_sectors_layers.draw) return;
-        map.generate_sweep(180, model);
+        //map.generate_sweep(180, model);
 
         const map_deg = jsConfig.sector_degree_scale;
         map.sector_count = (model.dimensions.x * (1 / map_deg) * (model.dimensions.y * (1 / map_deg)));

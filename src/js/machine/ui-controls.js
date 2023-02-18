@@ -57,8 +57,8 @@ const cam = {
         cam.camera.lookAt(cam.util_v);
 
         cam.camera.getWorldDirection(cam.util_v);
-
         cam.direction.copy(cam.util_v);
+
         cam.right.crossVectors(cam.util_v, cam.camera.up).normalize();
         cam.dot_y = cam.camera.up.dot(y_up);
         cam.dot_x = cam.right.dot(x_right);

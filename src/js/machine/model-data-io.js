@@ -334,7 +334,7 @@ function SET_DATA_SD(obj, custom_length=null){
     }
 
 
-    delete(obj);
+    obj = null;
 }
 
 // —————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
@@ -433,6 +433,7 @@ const REQ = {
     async load(asset_obj){
         asset_obj.list.map(r=>{
             r.timer = timer(r.name).start();
+            console.log(r);
         });
         asset_obj.bytes_loaded = 0;
         asset_obj.queue_length = asset_obj.list.length;
@@ -442,6 +443,7 @@ const REQ = {
     async post_method_load(asset_obj){
         asset_obj.list.map(r=>{
             r.timer = timer(r.name).start();
+            console.log(r);
         });
         asset_obj.bytes_loaded = 0;
         asset_obj.queue_length = asset_obj.list.length;
@@ -468,6 +470,7 @@ export const modelDataIo = {
         modelDataIo.init_vars = init_vars;
 
         if(jsConfig.GENERAL_DEBUG) modelDataIo.REQ.load(jsConfig.assets.test).then(r => modelDataIo.REQ.complete(r));
+
         modelDataIo.REQ.load(jsConfig.assets.static).then(r => modelDataIo.REQ.complete(r));
         modelDataIo.REQ.post_method_load(jsConfig.assets.database).then(r => modelDataIo.REQ.complete(r));
         return true;

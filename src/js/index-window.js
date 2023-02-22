@@ -90,7 +90,7 @@ const page = {
             'places':'basic-hexagon',
             'mpa_s_designated':'mpa-shape',
             'mpa_s_proposed':'mpa-shape',
-            'isobath':'isobath-shape'
+            'iso_bath':'iso-bath-shape'
         };
 
         Object.entries(legend_elements).map(kv => {
@@ -114,7 +114,7 @@ const page = {
             if(jsConfig.hasOwnProperty(control_item.id+'_default')) {
 
                 const has_state = jsConfig[control_item.id+'_default'];
-                console.log(has_state, control_item.id);
+                //console.log(has_state, control_item.id);
                 if(has_state) cd.classList.add('control-toggle');
             }
 

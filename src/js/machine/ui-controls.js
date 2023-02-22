@@ -152,8 +152,8 @@ export const controls = {
             } else {
                 controls.cam.base_pos.multiplyScalar(e_meta.scale_z);
                 util_v.copy(controls.v.user.mouse.plane_pos).multiplyScalar(1 - e_meta.scale_z);
-                model.position.sub(util_v);
                 controls.v.user.mouse.plane_pos.sub(util_v);
+                model.position.sub(util_v);
             }
         }
 

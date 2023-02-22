@@ -174,7 +174,7 @@ function point_selector(){
         P.set();
 
         P.top_arr.object.visible = false;
-        P.marker.visible = false;
+        P.marker.visible = true;
         P.ray.visible = false;
         P.offest_ray.visible = false;
         P.label.object.visible = false;
@@ -226,7 +226,31 @@ function point_selector(){
     }
 
     function select(type, dict, DAT, cam_obj){
-        if(dict.bump && P.selection[type]) P.selection[type] += dict.bump;
+        if(dict.bump && P.selection[type]){
+            if(type === 'wudi_points'){
+                const current_selection = DAT.DATA.SD[type][P.selection[type]];
+                const geo_loop = DAT.DATA.CONF.wudi_geo_lookup[current_selection.geo-1];
+                //console.log(geo_loop, geo_loop.points.indexOf(current_selection.rowid-1));
+                const current_index = geo_loop.points.indexOf(P.selection[type]);
+                const next_index = geo_loop.points.indexOf(P.selection[type] + dict.bump);
+                console.log(P.selection[type], current_index, next_index, geo_loop.points.length);
+
+                if(next_index === -1){
+                    if(current_index === 0){
+                        P.selection[type] = geo_loop.points[geo_loop.points.length-1];
+                    } else {
+                        P.selection[type] = geo_loop.points[0];
+                    }
+                }else{
+                    P.selection[type] = geo_loop.points[next_index];
+                }
+                console.log(P.selection[type]);
+            }else{
+                P.selection[type] += dict.bump;
+            }
+        }
+
+        //if(dict.bump && P.selection[type]) P.selection[type] += dict.bump;
         if(dict.index) P.selection[type] = dict.index;
         const point = DAT.DATA.SD[type][P.selection[type]];
 
@@ -243,6 +267,7 @@ function point_selector(){
             P.set(vc.e, vc.b, vc.c);
             P.offset_angle = P.direction.angleTo(vc.b)*Math.sign(vc.a.dot(vc.e));
             P.update();
+
         }else{
             P.top_arr.object.visible = false;
             if(type === 'protected_areas') vc.a.set(point.CENTROID[0] * 1.0, point.CENTROID[1] * 1.0, 0.0);
@@ -260,7 +285,6 @@ function point_selector(){
 
         P.label.text = util.rad_to_deg(P.offset_angle).toFixed(2)+'º';
         P.label.update();
-
 
         return P.selection[type];
     }
@@ -377,23 +401,24 @@ const layers = {
             layers.wudi_points =  new THREE.Group();
             layers.wudi_points.name = 'wudi';
 
+
             const data = DATA.SD.wudi_points;
 
             DATA.CONF.wudi_index_reverse = {};
+            DATA.CONF.wudi_geo_lookup = [...DATA.SD.geonames];
+            DATA.CONF.wudi_geo_lookup.map(g =>{g.points = []});//
 
             if(jsConfig.data_source_masked_indices){
                 DATA.CONF.wudi_index = data.map(v => v.pid);
                 data.map(v => {
                     DATA.CONF.wudi_index_reverse[v.pid] = v.rowid - 1;
+                    DATA.CONF.wudi_geo_lookup[v.geo-1].points.push(v.rowid - 1);
                 });
-
-                //DATA.CONF.wudi_index_reverse = data.map(v => v.pid);
-
             }else{
                 DATA.CONF.wudi_index = data.map(v => v.rowid - 1);
             }
-
-            console.log(DATA.CONF.wudi_index_reverse);
+            console.log('DATA.CONF.wudi_geo_lookup', DATA.CONF.wudi_geo_lookup);
+            console.log('DATA.CONF.wudi_index_reverse', DATA.CONF.wudi_index_reverse);
 
 
             layers.data.wudi_point.color_adaptive.wudi_up = Array(data.length).fill(0);
@@ -1088,7 +1113,7 @@ const model = {
         model.position_marker.visible = false;
 
         model.container.add(model.user_position_marker);
-        model.user_position_marker.visible = false;
+        model.user_position_marker.visible = true;
 
         model.container.updateMatrix();
         model.container.updateMatrixWorld(true);

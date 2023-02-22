@@ -1,4 +1,4 @@
-const path_prefix = '';//./data/'; ///Users/sac/Sites/wudi-model-update/data/static-build-products/'
+const path_prefix = '/data/'; ///Users/sac/Sites/wudi-model-update/data/static-build-products/'
 const jsConfig = {
     colors: {
         up_welling:'#0000FF',
@@ -118,7 +118,7 @@ const jsConfig = {
     assets:{
         test:{
             name: 'debug_test_data',
-            list: [{url: '/data/data_test.json', type: 'json', name:'test', size:0}]
+            list: [{url: '/static/data/data_test.json', type: 'json', name:'test', size:0}]
         },
         database:{
             name: 'database_queries',
@@ -158,12 +158,12 @@ const jsConfig = {
     bounds: [-7.0, 29.0, 37.0, 49.0],
     sector_degree_scale: 2.0,
     degree_scale_str: 'deg_2',
-    static_path: "", //"/data",
+    static_path: path_prefix, //"/data",
     map_sectors_layers: {
         draw: true,
         allow: ['polygons', 'depth_maps', 'protected_areas'], /// 'line_strings', 'depth_maps'], //'meshes'], //, ''contours', mpa_s'], //, 'meshes'] 'polygons', 'line_strings',
     },
-    GENERAL_DEBUG: true,
+    GENERAL_DEBUG: false,
     MAP_DEBUG: false,
     DEBUG_TRACE_INITIAL_STATE: false,
     map_axes_active: true,

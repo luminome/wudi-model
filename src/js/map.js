@@ -3,6 +3,8 @@ import {loader} from './machine/loader';
 import jsConfig from './config';
 import * as util from "./machine/util";
 import model from "./model";
+import * as shaders from "./machine/shaders";
+
 import {set_buffer_at_index, v3_from_buffer} from "./machine/util";
 
 
@@ -11,7 +13,7 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
 
 //https://www.npmjs.com/package/delaunay-triangulate
-const triangulate = require("delaunay-triangulate")
+//const triangulate = require("delaunay-triangulate")
 
 const map_loader = {
     notify(count, obj, parent_obj){
@@ -51,8 +53,48 @@ const objects = {
         // a_geometry.setIndex([0, 1, 2, 2, 3, 0, 3, 4, 5, 5, 0, 3]);
         // a_geometry.rotateZ(Math.PI/2);
         return plane;
-    }
+    },
 
+    ray_special(){
+        const vertices = [
+            -1,0,0,
+            1,0,0,
+        ]
+
+        function init(){
+            const material = new THREE.LineBasicMaterial({color: 0x00FFFF});
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute( 'position', new THREE.BufferAttribute( new Float32Array(R.vertices), 3 ) );
+            R.ray = new THREE.LineSegments( geometry, material );
+            R.object.add(R.ray);
+            R.object.name = 'ray';
+            return R;
+        }
+
+        function set(a,b){
+            R.vectors.a.copy(a);
+            R.vectors.b.copy(b);
+            util.set_buffer_at_index(R.ray.geometry.attributes.position.array, 0, a.toArray());
+            util.set_buffer_at_index(R.ray.geometry.attributes.position.array, 1, b.toArray());
+            R.ray.geometry.attributes.position.needsUpdate = true;
+            R.ray.geometry.computeBoundingSphere();
+        }
+
+        const R = {
+            vectors:{
+                a:new THREE.Vector3(),
+                b:new THREE.Vector3()
+            },
+            ray: null,
+            object: new THREE.Object3D(),
+            vertices: vertices,
+            init,
+            set
+        }
+
+
+        return R
+    }
 }
 
 const vc = {
@@ -63,6 +105,9 @@ const vc = {
     e: new THREE.Vector3(0, 0, 0),
     up: new THREE.Vector3(0, 0, 1),
 }
+
+const mpa_mat = shaders.legend.clone();
+
 
 //general map-sector
 class Sector {
@@ -125,21 +170,31 @@ class Sector {
         }
 
         if (object.name === 'contours') {
-            const bath_o_mat = new THREE.ShaderMaterial({
-                uniforms: {
-                    depth: {
-                        value: jsConfig.contours.limit_distance
-                    },
-                    color: {
-                        value: new THREE.Color(jsConfig.mats.contours.dict.color)
-                    },
-                    baseColor: {
-                        value: new THREE.Color(jsConfig.colors.window)
-                    }
-                },
-                vertexShader: document.getElementById('bathos-vertex-Shader').textContent,
-                fragmentShader: document.getElementById('bathos-fragment-Shader').textContent,
-            });
+
+            const bath_o_mat = shaders.by_distance;
+            bath_o_mat.uniforms.depth.value = jsConfig.contours.limit_distance;
+            bath_o_mat.uniforms.color.value = new THREE.Color(jsConfig.mats.contours.dict.color);
+            bath_o_mat.uniforms.baseColor.value = new THREE.Color(jsConfig.colors.window);
+
+            //
+            // const bath_o_mat = new THREE.ShaderMaterial({
+            //     uniforms: {
+            //         depth: {
+            //             value: jsConfig.contours.limit_distance
+            //         },
+            //         color: {
+            //             value: new THREE.Color(jsConfig.mats.contours.dict.color)
+            //         },
+            //         baseColor: {
+            //             value: new THREE.Color(jsConfig.colors.window)
+            //         }
+            //     },
+            //     vertexShader: document.getElementById('bathos-vertex-Shader').textContent,
+            //     fragmentShader: document.getElementById('bathos-fragment-Shader').textContent,
+            // });
+
+
+
             const contours = new THREE.Group();
             object.raw.map(obj => {
                 const contour_depth = new THREE.Group();
@@ -192,8 +247,9 @@ class Sector {
         }
 
         if (object.name === 'protected_areas') {
-            const mpa_mat = new THREE[jsConfig.mats.mpaMaterial.type](jsConfig.mats.mpaMaterial.dict);
-            mpa_mat.blending = THREE.AdditiveBlending;
+
+
+
 
             object.raw.map(obj => {
                 const this_mpa_s = new THREE.Group();
@@ -201,12 +257,18 @@ class Sector {
 
                 obj['line_strings'].map((mpa, n) => {
                     const shape = util.shape_from_array(mpa);
+
+                    const mpa_color = ref.STATUS_ENG === 'Designated' ? new THREE.Color(jsConfig.colors.mpa_s_designated) : new THREE.Color(jsConfig.colors.mpa_s_proposed);
+
                     const geometry = new THREE.ShapeBufferGeometry(shape);
-                    const t_mat = mpa_mat.clone();
-                    const t_color = ref.STATUS_ENG === 'Designated' ? jsConfig.colors.mpa_s_designated : jsConfig.colors.mpa_s_proposed;
-                    t_mat.color = new THREE.Color(t_color);
-                    t_mat.opacity = 0.25;
-                    const mesh = new THREE.Mesh(geometry, t_mat);
+                    geometry.setAttribute('color', new THREE.InstancedBufferAttribute( new Float32Array( mpa_color.toArray() ), 3 ));
+
+
+                    // const t_mat = mpa_mat.clone();
+                    // const t_color = ref.STATUS_ENG === 'Designated' ? jsConfig.colors.mpa_s_designated : jsConfig.colors.mpa_s_proposed;
+                    // t_mat.color = new THREE.Color(t_color);
+                    // t_mat.opacity = 0.25;
+                    const mesh = new THREE.Mesh(geometry, mpa_mat);
                     mesh.userData.is_part = true;
                     mesh.name = 'protected_areas_sector' + obj['id'] + '_' + n;
                     mesh.userData.id = obj['id'];
@@ -248,8 +310,11 @@ class Sector {
                 vertexShader: document.getElementById('map-polygons-vertex-Shader').textContent,
                 fragmentShader: document.getElementById('map-polygons-fragment-Shader').textContent,
                 side: THREE.FrontSide,
-                depthWrite: true,
+                // depthWrite: true,
+                // depthTest: false,
             });
+
+
             const polygons = new THREE.Group();
 
             object.raw.map(obj => {
@@ -266,6 +331,8 @@ class Sector {
             polygons.userData.type = 'polygons';
             polygons.name = object.name;
             this.group.add(polygons);
+            //polygons.renderOrder = 5;
+
             this.group.position.setZ(-0.001);
         }
 
@@ -274,23 +341,32 @@ class Sector {
             const c_object = object.raw[0];
             //console.log(c_object)
 
-            const bath_o_mat = new THREE.ShaderMaterial({
-                uniforms: {
-                    depth: {
-                        value: jsConfig.contours.limit_distance
-                    },
-                    color: {
-                        value: new THREE.Color(jsConfig.mats.contours.dict.color)
-                    },
-                    baseColor: {
-                        value: new THREE.Color(jsConfig.colors.window)
-                    }
-                },
-                vertexShader: document.getElementById('bathos-vertex-Shader').textContent,
-                fragmentShader: document.getElementById('bathos-fragment-Shader').textContent,
-            });
+            const bath_o_mat = shaders.by_distance;
+            bath_o_mat.uniforms.depth.value = jsConfig.contours.limit_distance;
+            bath_o_mat.uniforms.color.value = new THREE.Color(jsConfig.mats.contours.dict.color);
+            bath_o_mat.uniforms.baseColor.value = new THREE.Color(jsConfig.colors.window);
+
+            // const bath_o_mat = new THREE.ShaderMaterial({
+            //     uniforms: {
+            //         depth: {
+            //             value: jsConfig.contours.limit_distance
+            //         },
+            //         color: {
+            //             value: new THREE.Color(jsConfig.mats.contours.dict.color)
+            //         },
+            //         baseColor: {
+            //             value: new THREE.Color(jsConfig.colors.window)
+            //         }
+            //     },
+            //     vertexShader: document.getElementById('bathos-vertex-Shader').textContent,
+            //     fragmentShader: document.getElementById('bathos-fragment-Shader').textContent,
+            //     // depthTest: false,
+            //     // depthWrite: true,
+            // });
+
             const vertices = [];
             const contours = new THREE.Group();
+            const line_color_default = new THREE.Color(jsConfig.mats.contours.dict.color);
 
             //console.log(c_object.labels);
             // c_object.labels.map(label_depth => {
@@ -365,7 +441,7 @@ class Sector {
 
 
             c_object.contour_lines.map(line => {
-
+                const colors = [];
                 const line_verts = [];
                 for (let n = line.start; n < line.end; n++) {
                     const xyz = [c_object.verts_xy[n * 2], c_object.verts_xy[n * 2 + 1], line.depth / jsConfig.contours.depth_max];
@@ -401,18 +477,37 @@ class Sector {
                     }
                 }
 
+                for (let i = 0; i < line_verts.length / 3; i++) {
+                    colors.push(...line_color_default.toArray());
+                }
+
+
                 if(line.depth !== 0 && line.depth !== -200) {
                     const geometry = new THREE.BufferGeometry();
+
+
                     geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(line_verts), 3));
+                    geometry.setAttribute('color', new THREE.BufferAttribute(Float32Array.from(colors), 3));
                     geometry.computeVertexNormals();
                     geometry.translate(0, 0, a);
 
                     const contour = new THREE.Line(geometry, bath_o_mat);
                     contour.name = 'depth_contour';
                     contour.userData.depth = line.depth;
+                    contour.userData.count = line_verts.length / 3;
                     contour.interactive = true;
-                    contours.add(contour);
 
+                    contour.userData.setColors = (arr) => {
+                        for (let i = 0; i < contour.userData.count; i++) {
+                            contour.geometry.attributes.color.array[i*3] = arr[0];
+                            contour.geometry.attributes.color.array[i*3+1] = arr[1];
+                            contour.geometry.attributes.color.array[i*3+2] = arr[2];
+                        }
+                        contour.geometry.attributes.color.needsUpdate = true;
+                    }
+
+                    contours.add(contour);
+                    contour.renderOrder = 10;
 
                     // Line2 ( LineGeometry, LineMaterial )
                     // const f_geometry = new LineGeometry();
@@ -467,7 +562,7 @@ class Sector {
 
             const mesh = new THREE.Mesh(geometry, meshes_material);
             mesh.userData.is_depth_map = true;
-
+            mesh.interactive = true;
             //mesh.position.set(0.0,0.0,-0.01);
         //     object.raw.map(obj => {
         //         //console.log(obj, obj.indices.length, obj.vertices.length/3);
@@ -499,12 +594,10 @@ class Sector {
             contours.userData.enabled = true;
             contours.userData.type = 'contours';
 
-
-
-
             contours.add(mesh);
-            this.group.add(contours);
 
+            this.group.add(contours);
+            mesh.renderOrder = 9;
 
 
 
@@ -662,6 +755,8 @@ class Sector {
         this.group.userData.center = this.center;
         this.group.userData.owner = this;
         this.group.name = `Sector-${this.id}-group`;
+        this.group.sector = true;
+
         this.objects.plane = plane_line;
 
         const meta_json = {name:'sector', list:[{url: `${this.path}/meta.json`, type: 'json', name: 'meta'}]};
@@ -725,6 +820,7 @@ const map = {
         e: new THREE.Vector3(0, 0, 0),
         up: new THREE.Vector3(0, 0, 1)
     },
+    ray: objects.ray_special().init(),
     protected_areas: null,
     sector_count: 0,
     object: new THREE.Group(),
@@ -743,29 +839,42 @@ const map = {
     },
     update(cam_obj, user_position){
         if(!jsConfig.map_sectors_layers.draw) return;
+        const prk = jsConfig.sector_degree_scale*1.5;
+        map.object.children.forEach(sector_or_object => {
 
-        map.object.children.forEach(sector => {
-            map.vc.a.copy(sector.userData.center);
-            map.object.localToWorld(map.vc.a);
-            map.vc.b.copy(user_position).sub(cam_obj.projected);
+            if(sector_or_object.sector) {
+                map.vc.a.copy(sector_or_object.userData.center);
+                map.object.localToWorld(map.vc.a);
 
-            const figuration = Math.floor(Math.pow(cam_obj.camera_scale, jsConfig.levels)*(jsConfig.levels+1));
-            const L = map.vc.a.distanceTo(map.vc.b);
 
-            if (L < jsConfig.levels * jsConfig.sector_degree_scale) {
-                let LV = figuration - Math.floor((L/(jsConfig.levels * jsConfig.sector_degree_scale))*jsConfig.levels);
-                if (LV > 4) LV = 4;
-                if (LV < 0) LV = 0;
-                sector.userData.owner.set_level(LV);
+
+
+                map.vc.b.copy(user_position).sub(cam_obj.projected);
+
+                const figuration = Math.floor(Math.pow(cam_obj.camera_scale, jsConfig.levels) * (jsConfig.levels + 1));
+
+                const L = map.vc.a.distanceTo(map.vc.b);
+
+                if (L < jsConfig.levels * prk) {
+                    let LV = figuration - Math.floor((L / (jsConfig.levels * prk)) * jsConfig.levels);
+                    if (LV > 4) LV = 4;
+                    if (LV < 0) LV = 0;
+                    sector_or_object.userData.owner.set_level(LV);
+                }
             }
         });
     },
-    init(model){
+    init(model, target_model, cam_obj){
         if(!jsConfig.map_sectors_layers.draw) return;
         //map.generate_sweep(180, model);
 
         const map_deg = jsConfig.sector_degree_scale;
         map.sector_count = (model.dimensions.x * (1 / map_deg) * (model.dimensions.y * (1 / map_deg)));
+        map.cam_obj = cam_obj;
+
+        mpa_mat.uniforms.full_d.value = map.cam_obj.max_zoom;
+        mpa_mat.uniforms.max_alpha.value = 0.3;
+        mpa_mat.blending = THREE.AdditiveBlending;
 
         for (let i = 0; i < map.sector_count; i++) {
             const x = i % (model.dimensions.x * (1 / map_deg));
@@ -784,11 +893,23 @@ const map = {
             let loc = [sx, sy];
             const new_tile = new Sector(i, loc, tile_vertices);
             map.object.add(new_tile.group);
+            new_tile.group.renderOrder = 20;
         }
 
+        map.object.add(map.ray.object);
+        map.ray.visible = true;
+
         console.log('map contains', map.sector_count, `${map_deg}º sectors`);
-        map.object.position.set(-model.center.x, -model.center.y, 0.0);
-        model.container.add(map.object);
+        map.object.rotateX(Math.PI/-2);
+        map.object.position.set(-model.center.x, 0.0, model.center.y);
+
+
+        map.object.renderOrder = 15;
+
+        target_model.add(map.object);
+
+
+
     }
 }
 

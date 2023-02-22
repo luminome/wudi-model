@@ -7,8 +7,7 @@ const DATA = {
     temporal_data_process:{
         average(caller = null) {
             const points_count = DATA.TD.points_count;///vars.data.wudi_data.points_count;
-
-            console.log(points_count);
+            console.warn('average points_count', points_count,'called by', caller);
 
             const times_count = SELECTOR.time.data.selected.length;//vars.selecta.wudi.times.selected.length;
 
@@ -27,8 +26,12 @@ const DATA = {
 
             for (let t = 0; t < times_list.length; t++) {
                 const tn = times_list[t].toString();
+                console.log(tn, DATA.TD[tn]);
+
                 const data = DATA.TD[tn].data;
                 const meta = DATA.TD[tn].meta;
+
+
 
                 Object.entries(meta).map((k) => meta_avg[k[0]] += k[1]);
                 for (let i = 0; i < points_count; i++) {
@@ -65,10 +68,14 @@ const DATA = {
     },
     temporal_data_acquire:{
         get(){
+            SELECTOR.time.data.required = SELECTOR.time.data.selected.filter(s => DATA.TD[s] === undefined);
+            console.log('temporal_data_acquire get required', SELECTOR.time.data.required);
+
             if(SELECTOR.time.data.required.length === 0){
                 if(modelDataIo.graph.active) modelDataIo.graph.run();
                 DATA.temporal_data_process.average('temporal_data_acquire get');
                 modelDataIo.view.update();
+                modelDataIo.view.modified_callback();
                 return;
             }
 
@@ -79,7 +86,6 @@ const DATA = {
                 })
             }
             modelDataIo.REQ.post_method_load(post_obj).then(r => modelDataIo.REQ.complete(r));
-            if (SELECTOR.point.data.selected.length > 0) DATA.temporal_data_acquire.get_points();
         },
         set(resource){
             resource.list.forEach(obj => {
@@ -92,7 +98,9 @@ const DATA = {
             });
             //run averager here:
             DATA.temporal_data_process.average('temporal_data_acquire set');
+            if (SELECTOR.point.data.selected.length > 0) DATA.temporal_data_acquire.get_points();
             modelDataIo.view.update();
+            modelDataIo.view.modified_callback();
         },
         get_points(){
             const post_obj = {
@@ -100,7 +108,10 @@ const DATA = {
                 list: []
             }
 
-            const times_list = SELECTOR.time.data.selected.length === 0 ? ['all'] : SELECTOR.time.data.selected;
+            const times_list = [...SELECTOR.time.data.selected];
+            times_list.push(...SELECTOR.time.data.year);
+            if(!times_list.includes('all')) times_list.unshift('all');
+            //const times_list = SELECTOR.time.data.selected.length === 0 ? ['all'] : SELECTOR.time.data.selected;
 
             for (let t of times_list) {
                 const request_points_selected = [];
@@ -118,6 +129,8 @@ const DATA = {
                 }
             }
 
+            SELECTOR.time.data.required = SELECTOR.time.data.selected.filter(s => DATA.TD[s] === undefined);
+
             // console.log('get_points', ...post_obj.list);
             //
             // Object.keys(DATA.TD.point_cache).map(t=>{
@@ -127,11 +140,15 @@ const DATA = {
 
             if (post_obj.list.length > 0) {
                 modelDataIo.REQ.post_method_load(post_obj).then(r => modelDataIo.REQ.complete(r));
+            } else if(SELECTOR.time.data.required.length > 0) {
+                console.log('ERROR point_data_acquire get required', SELECTOR.time.data.required);
+                //DATA.temporal_data_acquire.get();
             } else {
-                //proceed directly to graph because the points are loaded.
+                //proceed directly to graph because the points are loaded.? #// but what about the metas?
                 //wudi_graph_chart_daily();
-                DATA.temporal_data_process.average('temporal_data_acquire set');
+                DATA.temporal_data_process.average('point_data_acquire get');
                 modelDataIo.view.update();
+                modelDataIo.view.modified_callback();
                 modelDataIo.graph.run();
             }
 
@@ -184,10 +201,13 @@ const SELECTOR = {
             SELECTOR.time.data.selected = [];
             for (let y of SELECTOR.time.data.year) {
                 if(SELECTOR.time.data.month.length === 0){
+                    // if(!SELECTOR.time.data.selected.includes(y))
                     SELECTOR.time.data.selected.push(y);
+
                 }else{
                     for (let m of SELECTOR.time.data.month) {
-                        const timestamp = y + m;
+                        const timestamp = Number(`${y}${m}`);
+                        //if(!SELECTOR.time.data.selected.includes(timestamp))
                         SELECTOR.time.data.selected.push(timestamp);
                     }
                 }
@@ -205,6 +225,9 @@ const SELECTOR = {
             //if(modelDataIo.graph.active) modelDataIo.graph.run();
 
             SELECTOR.time.data.required = SELECTOR.time.data.selected.filter((t) => !SELECTOR.time.data.loaded.includes(t));
+
+            console.log('SELECTOR.time.data', SELECTOR.time.data);
+
             DATA.temporal_data_acquire.get();
         },
         clear_selection(time_type){

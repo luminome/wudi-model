@@ -3,10 +3,11 @@ const jsConfig = {
     colors: {
         up_welling:'#0000FF',
         down_welling:'#FF0000',
+        hybrid_welling:'#FFFFFF',
         up_welling_text:'#6666FF',
         down_welling_text:'#FF6666',
         mpa_s_designated:'#00EE00',
-        mpa_s_proposed:'#00AA00',
+        mpa_s_proposed:'#00AAFF',
         places:'#FFFF00',
         iso_bath:'#CCCCCC',
         info_bk_opacity: 0.85,
@@ -25,7 +26,7 @@ const jsConfig = {
         }
     },
     bounds_bottom_offset: 20,
-    graph_obj_height: 120,
+    graph_obj_height: 140,
     dom_references:{
         "q-nav-bar": {
             on: false,
@@ -45,14 +46,14 @@ const jsConfig = {
         },
     },
     line_strings: {
-        limit_distance: 50.0,
+        limit_distance: 10.0,
     },
     polygons: {
-        limit_distance: 50.0,
+        limit_distance: 20.0,
     },
     contours: {
         depth_max: 5000.0,
-        limit_distance: 15.0, //20.0,
+        limit_distance: 20.0, //20.0,
     },
     mats: {
         mapMarkersMaterial: {
@@ -82,6 +83,8 @@ const jsConfig = {
                 // opacity:1.0,
                 // color: 0x222222,
                 side: 'FrontSide',
+                // depthTest: false,
+                // depthWrite: true,
                 // flatShading: true,
                 // metalness: 0.0,
                 // roughness: 0.85,
@@ -93,6 +96,8 @@ const jsConfig = {
             dict: {
                 color: 0x222222,
                 side: 'FrontSide',
+                depthTest: true,
+                depthWrite: true
             }
         },
         contours: {
@@ -156,7 +161,7 @@ const jsConfig = {
     static_path: "", //"/data",
     map_sectors_layers: {
         draw: true,
-        allow: ['polygons', 'line_strings', 'depth_maps', 'protected_areas'], /// 'depth_maps'], //'meshes'], //, ''contours', mpa_s'], //, 'meshes'] 'polygons', 'line_strings',
+        allow: ['polygons', 'depth_maps', 'protected_areas'], /// 'line_strings', 'depth_maps'], //'meshes'], //, ''contours', mpa_s'], //, 'meshes'] 'polygons', 'line_strings',
     },
     GENERAL_DEBUG: true,
     MAP_DEBUG: false,
@@ -200,7 +205,7 @@ const jsConfig = {
     months_str: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
     active_layers: {
         wudi_points: true,
-        places: false,
+        places: true,
         protected_areas: false,
         iso_bath: true
     },

@@ -12,7 +12,7 @@ const g = {
 	selected: null,
 	last_selected: null,
     vis: {
-        pad:18,
+        pad:22,
 		gutter:{left:32,bottom:24},
         stroke: "#666666",
         stroke_high: "#CCCCCC",
@@ -70,25 +70,42 @@ class Bar {
 
 function get_range(m, axis){
 	const diff = (m[1]-m[0]);//*2.0;
-	let zg = Math.ceil(Math.log(diff))-1;// + 1;
+	let zg = Math.floor(Math.log(diff));//-1;// + 1;
 
 	const gr = zg < 0 ? g.mants[0] : g.mants[zg];
-
-
 	let hi = m[1] === 0 ? 0.0 : Math.ceil(m[1]/gr)*gr;
 	let lo = m[0] === 0 ? 0.0 : Math.ceil(Math.abs(m[0])*10)/-10;
+
 	if(hi % 2 !== 0 && axis === 'y' && zg > 1) hi+=gr;
 	if(lo % 2 !== 0 && axis === 'y' && zg > 1) lo-=gr;
 
 	let range = Math.ceil((hi-lo)/gr);
 	//range += (axis === 'y' && range % 2 !== 0) ? 1 : 0;
-
 	//g.log({d:diff, g:gr, z:zg, hi:hi, lo:lo});
 
 	const out_range = [];
+	const mxy = Math.ceil(m[1]/gr)*gr;
+	const miy = (Math.ceil(Math.abs(m[0])/gr)*gr)*-1;
+
+	// if(axis === 'y') {
+	// 	alert(gr+' '+mxy+' '+miy);
+	// }
+
+	//
+
 	for(let c = 0; c <= range; c++){
 		const mark = Math.round(((hi)-(c*gr))*1000)/1000;
-		out_range.push(mark);
+		if(axis === 'y'){
+			const cond = (Number.isInteger(mark) && mark % 2 === 0);
+			if((mark <= mxy || cond) && mark >= miy){
+				out_range.push(mark);
+			}
+
+		}else{
+			out_range.push(mark);
+		}
+		//if(m[1])
+
 	}
 	return {r:out_range, mant:gr};
 }
@@ -98,6 +115,7 @@ function make_axes_and_grid(_ctx, data){
 	const x_range_arr = get_range(data.xlim, 'x');
 	x_range_arr.r.reverse();
 	const y_range_arr = get_range(data.ylim, 'y');
+	console.log(data);
 
 	g.data_width = x_range_arr.r[x_range_arr.r.length-1];//data.data[0].length;
 	// console.log('x_range_arr', x_range_arr, g.data_width);
@@ -134,9 +152,12 @@ function make_axes_and_grid(_ctx, data){
 
 
 	tick_mant = 1;
+	const intervals = [];
+	if(Math.sign(y_range_arr.r[0]) === -1) y_range_arr.r.unshift(0);
     for(let yva = 0; yva < y_range_arr.r.length; yva++) {
 
         const y_off = yva*y_interval_px;
+
 		if(y_range_arr.r[yva] === 0){
 			y_zero = g.vis.pad+y_off;
 			_ctx.lineWidth = 2;
@@ -149,10 +170,12 @@ function make_axes_and_grid(_ctx, data){
 		const m = _ctx.measureText(y_range_arr.r[yva]);
 		const ht = (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)*0.8;
 		//g.log({ht:ht, i:y_interval_px});
-
 		if(ht+2 > y_interval_px) tick_mant = 2;
+		//if(y_range_arr.r.length > 10) tick_mant = 4;
+		///if(ht+4 > y_interval_px) tick_mant = 3;
 
 		if(yva % tick_mant === 0){
+			intervals.push(y_range_arr.r[yva]);
 			_ctx.beginPath();
 			_ctx.moveTo(g.vis.gutter.left, g.vis.pad+y_off);
 			_ctx.lineTo(g.w - g.vis.pad, g.vis.pad+y_off);
@@ -160,10 +183,27 @@ function make_axes_and_grid(_ctx, data){
 
 	        _ctx.font = `${g.vis.font_siz}px heavy_data`;
 	        _ctx.textAlign = 'right';
-	        _ctx.fillStyle = g.vis.legend_text;///"#00ff00";
+
+			const kfi = [g.vis.bar_up_text, g.vis.bar_down_text][+(y_range_arr.r[yva] < 0)];
+
+	        _ctx.fillStyle = y_range_arr.r[yva] === 0 ? g.vis.legend_text : kfi;///"#00ff00";
 	        _ctx.fillText(g.style === 'month' ? y_range_arr.r[yva]:Math.abs(y_range_arr.r[yva]), g.vis.gutter.left - (g.vis.font_siz / 2.0), (g.vis.pad + y_off) + (g.vis.font_siz / 2.0) );
 		}
+
     }
+
+	console.log(intervals, y_range_arr.r, intervals.includes(0));
+	if(!intervals.includes(0)){
+		const yva = y_range_arr.r.indexOf(0);
+		const y_off = yva*y_interval_px;
+		_ctx.lineWidth = 2;
+		_ctx.strokeStyle = g.vis.stroke_high;
+		_ctx.beginPath();
+		_ctx.moveTo(g.vis.gutter.left, g.vis.pad+y_off);
+		_ctx.lineTo(g.w - g.vis.pad, g.vis.pad+y_off);
+		_ctx.stroke();
+	}
+
 
     return {
 		x0:g.vis.gutter.left,

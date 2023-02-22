@@ -33,7 +33,7 @@ const label_maker = {
     dom_label(text, tick, dom){
         function init(){
             L.dom_element.style['position'] = 'absolute';
-            L.dom_element.style['color'] = '#FFFF00';
+            L.dom_element.style['color'] = '#FFFF00CC';
             L.dom_element.style.pointerEvents = 'none';
             L.dom_element.innerHTML = L.text;
             L.dom_element.style.display = 'none';

@@ -1,7 +1,10 @@
 import * as THREE from "three";
 import * as util from './util.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 
-let renderer, scene, view_axes, render_l_date
+let renderer, scene, composer, view_axes, render_l_date, layer_one, layer_two, layer_three
 
 const util_c = new THREE.Color();
 
@@ -19,44 +22,206 @@ const visibleAtZDepth = (depth, camera) => {
     return {'h': vis_ht, 'w': vis_ht * camera.aspect};
 };
 
+
+/**
+ * @author felixturner / http://airtight.cc/
+ *
+ * RGB Shift Shader
+ * Shifts red and blue channels from center in opposite directions
+ * Ported from http://kriss.cx/tom/2009/05/rgb-shift/
+ * by Tom Butterworth / http://kriss.cx/tom/
+ *
+ * amount: shift distance (1 is width of input)
+ * angle: shift angle in radians
+ */
+
+
+const o_shady = {
+
+	uniforms: {
+		"tDiffuse": { type: "t", value: null },
+		"amount":   { type: "f", value: 0.005 },
+		"angle":    { type: "f", value: 0.0 }
+	},
+
+	vertexShader: [
+        // "glEnable(GL_BLEND);",
+		"varying vec2 vUv;",
+
+		"void main() {",
+
+			"vUv = uv;",
+			"gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+
+		"}"
+
+	].join("\n"),
+
+	fragmentShader: [
+        // "glBlendFunc(GL_SRC_ALPHA, GL_ONE);",
+        // "glBlendFunc(GL_SRC_ALPHA, GL_ONE);",
+		"uniform sampler2D tDiffuse;",
+		"uniform float amount;",
+		"uniform float angle;",
+
+		"varying vec2 vUv;",
+
+		"void main() {",
+
+			"vec2 offset = amount * vec2( cos(angle), sin(angle));",
+			"vec4 cr = texture2D(tDiffuse, vUv + offset);",
+			"vec4 cga = texture2D(tDiffuse, vUv);",
+			"vec4 cb = texture2D(tDiffuse, vUv - offset);",
+			"gl_FragColor = vec4(cr.r, cga.g, cb.b, cga.a);",
+
+		"}"
+
+	].join("\n")
+
+};
+
+
+const shady = {
+
+	uniforms: {
+		"tDiffuse": { type: "t", value: null },
+		"alpha":   { type: "f", value: 1.0 },
+	},
+
+	vertexShader: [
+		"varying vec2 vUv;",
+		"void main() {",
+			"vUv = uv;",
+			"gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+		"}"
+	].join("\n"),
+
+	fragmentShader: [
+		"uniform sampler2D tDiffuse;",
+        "uniform float alpha;",
+		"varying vec2 vUv;",
+		"void main() {",
+			"vec4 cga = texture2D(tDiffuse, vUv);",
+			"gl_FragColor = vec4(cga.r, cga.g, cga.b, alpha);",
+		"}"
+
+	].join("\n")
+
+};
+
+
+
+class LayerSimple {
+	constructor( camera ) {
+		this.scene = new THREE.Scene();
+	}
+}
+
+class LayerComplex {
+	constructor( camera ) {
+		this.scene = new THREE.Scene();
+		// this.scene.background = null;
+        // this.scene.setClearColor(0x000000, 0);
+        this.renderPass = new RenderPass( this.scene, camera );
+		this.renderPass.clear = true;
+		this.renderPass.autoClear = false;
+		this.renderPass.clearDepth = false;
+		this.renderPass.renderToScreen = true;
+        this.renderPass.clearAlpha = 0.0;
+        this.renderPass.clearColor = 0x00FF00;
+
+
+        this.shaderPass = new ShaderPass( shady );
+        this.shaderPass.material.uniforms[ 'alpha' ].value = 0.95;
+        this.shaderPass.renderToScreen = true;
+        this.shaderPass.autoClear = true;
+        this.shaderPass.clear = true;
+        this.shaderPass.material.transparent = true;
+        this.shaderPass.material.blending = THREE.AdditiveBlending;
+	}
+}
+
 function init(){
 
-    environment.controls.cam.camera = new THREE.PerspectiveCamera(60, environment.vars.view.width / environment.vars.view.height, 0.1, 300);
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(environment.vars.view.colors.window_background);//util.color_to_hex(environment.vars.view.colors.window_background));
+    environment.controls.cam.camera = new THREE.PerspectiveCamera(60, environment.vars.view.width / environment.vars.view.height, 0.1, 80);
+    // scene = new THREE.Scene();
+    // scene.background = new THREE.Color(environment.vars.view.colors.window_background);//util.color_to_hex(environment.vars.view.colors.window_background));
 
     renderer = new THREE.WebGLRenderer({
         powerPreference: "high-performance",
-        antialias: true
+        antialias: false,
+        physicallyCorrectLights: true
+        // alpha: true
     });
 
-    renderer.setPixelRatio(1);
+    renderer.setPixelRatio(2);
     renderer.setSize(environment.vars.view.width, environment.vars.view.height);
-    renderer.setClearColor(0x000000);
+    // renderer.setClearColor(0x000000);
+    // renderer.setClearAlpha(0.0);
+    renderer.setClearColor( 0x000000, 0 );
+    renderer.autoClear = false;
+    // renderer.shadowMap.enabled = true;
+    // renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    const parameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, stencilBuffer: false };
+    const renderTarget = new THREE.WebGLRenderTarget( environment.vars.view.width, environment.vars.view.height, parameters );
 
-    if(environment.vars.view.features.axes_helper){
-        view_axes = new THREE.AxesHelper(environment.vars.view.scene_width / 2);
-        view_axes.material.blending = THREE.AdditiveBlending;
-        view_axes.material.transparent = true;
-        scene.add(view_axes);
-    }
+// cmp = new THREE.EffectComposer(r, renderTarget);
 
+    composer = new EffectComposer( renderer, renderTarget );//, renderTarget );
+
+    // if(environment.vars.view.features.axes_helper){
+    //     view_axes = new THREE.AxesHelper(environment.vars.view.scene_width / 2);
+    //     view_axes.material.blending = THREE.AdditiveBlending;
+    //     view_axes.material.transparent = true;
+    //     scene.add(view_axes);
+    // }
+    //
     const light = new THREE.PointLight(0xffffff, 6.0, environment.vars.view.scene_width * 6);
     light.position.set(0, environment.vars.view.scene_width * 3, 0);
-    scene.add(light);
 
-    const ambient_light = new THREE.AmbientLight( 0x999999 ); // soft white light
-    scene.add( ambient_light );
+    const light2 = new THREE.PointLight(0xffffff, 10.0, environment.vars.view.scene_width * 6);
+    light2.position.set(0, environment.vars.view.scene_width * 3, 0);
+
+    // scene.add(light);
+
+    const ambient_light = new THREE.AmbientLight( 0xFFFFFF ); // soft white light
+    // scene.add( ambient_light );
 
     environment.dom.appendChild(renderer.domElement);
     environment.vars.dom = renderer.domElement;
 
 
+	layer_one = new LayerSimple( environment.controls.cam.camera );
+    layer_one.scene.background = new THREE.Color(environment.vars.view.colors.window_background);
+    // layer_one.scene.add(light);
+    // layer_one.scene.add(ambient_light);
+	layer_one.scene.add( environment.vars.map_model );
+    // composer.addPass( layer_one.renderPass );
 
-    scene.add(environment.vars.model);
+    layer_two = new LayerSimple( environment.controls.cam.camera );
+    // layer_two.scene.add(light);
+    // layer_two.scene.add(ambient_light);
+	layer_two.scene.add( environment.vars.model );
+    // composer.addPass( layer_two.renderPass );
+
+	layer_three = new LayerComplex( environment.controls.cam.camera );
+    // layer_three.scene.add(light2);
+    // layer_three.scene.add(ambient_light);
+	layer_three.scene.add( environment.vars.wudi_model );
+    composer.addPass( layer_three.renderPass );
+    composer.addPass( layer_three.shaderPass );
+
+
+    // const hmat = new THREE.MeshBasicMaterial({
+    //     blending: THREE.AdditiveBlending,
+    //     // depthTest: false,
+    //     // depthWrite: true,
+    // })
+    //
+    // layer_three.scene.overrideMaterial = hmat;
+
+    //scene.add(environment.vars.model);
     // scene.add(environment.arrow);
     //environment.vars.model.updateMatrixWorld();
     //environment.controls.cam.run();
@@ -418,9 +583,7 @@ function post_init() {
                         tools.object.add(tools[m]);
                     });
 
-                    console.log(tools);
-
-
+                    //console.log(tools);
 
                     const points = [tools.start, tools.end];
                     const ray_geometry = new THREE.BufferGeometry().setFromPoints( points );
@@ -430,6 +593,7 @@ function post_init() {
                     tools.ray = new THREE.Line( ray_geometry, material );
                     tools.object.add(tools.ray);
                 },
+
                 set(a,b){
                     tools.start.copy(a);
                     tools.end.copy(b);
@@ -472,7 +636,22 @@ function render(a) {
     }
     environment.fps = k_delta();
     environment.vars.animation(a);
-    renderer.render(scene, environment.controls.cam.camera);
+
+
+    renderer.clear();
+    renderer.render(layer_one.scene, environment.controls.cam.camera);
+    renderer.clearDepth();
+    renderer.render(layer_two.scene, environment.controls.cam.camera);
+    // renderer.render(layer_three.scene, environment.controls.cam.camera);
+    composer.render();
+
+    // renderer.clearDepth();
+    // renderer.render(layer_three.scene, environment.controls.cam.camera);
+
+    //renderer.clear();
+    //renderer.clearDepth();
+	//composer.render();
+    //
 }
 
 function animate(f) {

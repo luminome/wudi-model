@@ -21,6 +21,28 @@ const obs_css = ['none', 'block'];
 const display_inline_array = ['none', 'inline-block'];
 const display_array = ['none', 'block'];
 
+
+// {
+//   const error = console.error.bind(console)
+//   console.error = (...args) => {
+//     error('My Console!!!')
+//     error(...args)
+//   }
+// }
+//
+// window.addEventListener('unhandledrejection', function (e) {
+//     const message = `(${e.reason.message}) ${e.reason.stack}`;
+//     console.warn('ERROR', e);
+//     alert("Error occurred: " + message);
+// })
+//
+// window.addEventListener('error', function (e) {
+//   //It Will handle JS errors
+//     const message = `(${e.lineno}) ${e.error.stack}`;
+//     console.warn('ERROR', e);
+//     alert("Error occurred: " + message);
+// })
+
 const init_vars = {
     READY: false,
     trace: LOG(obs),
@@ -52,7 +74,7 @@ const init_vars = {
                 on: false,
             },
             tools:{
-                on: true,
+                on: false,
             },
             position_lines:{
                 on: false,
@@ -69,6 +91,8 @@ const init_vars = {
     },
     action: 'none',
     model: new THREE.Group(),
+    map_model: new THREE.Group(),
+    wudi_model: new THREE.Group(),
     frame: null,
     animation(a){
         init_vars.frame = a;
@@ -91,6 +115,8 @@ const download_component = {
     },
     output(block){
         console.log(block);
+
+        //fail;
 
         const wudi_textual_output = [];
         const wudi_geodata_output = [];
@@ -241,9 +267,18 @@ const graph_component = {
     dom: document.getElementById("graph-obj-bar"),
     run() {
         const style_current = graph_component.dom.style.display;
+        // test
+        // console.log('DAT.SELECTOR.time.data.selected', DAT.SELECTOR.time.data.selected);
+        // console.log('DAT.SELECTOR.point.data.selected', DAT.SELECTOR.point.data.selected);
+        // Object.keys(DAT.DATA.TD.point_cache).map(k => {
+        //     console.log(k, DAT.DATA.TD.point_cache[k]);
+        // });
 
         if(DAT.SELECTOR.point.data.selected.length) {
             const times_list = DAT.SELECTOR.time.data.selected.length === 0 ? ['all'] : DAT.SELECTOR.time.data.selected;
+            console.warn(DAT.SELECTOR.time.data);
+
+
             const diagonal = times_list.map(t => {
                 return Math.max(...DAT.SELECTOR.point.data.selected.map(p => DAT.DATA.TD.point_cache[`${p}-${t}`].meta));
             });
@@ -374,7 +409,8 @@ const view = {
         b: new THREE.Vector3(0, 0, 0),
         c: new THREE.Vector3(0, 0, 0),
         d: new THREE.Vector3(0, 0, 0),
-        e: new THREE.Vector3(0, 0, 0)
+        e: new THREE.Vector3(0, 0, 0),
+        color: new THREE.Color(0x000000),
     },
     plane: null,
     user_position: new THREE.Vector3(0, 0, 0),
@@ -383,12 +419,12 @@ const view = {
     user_position_round: new THREE.Vector3(0, 0, 0),
     position_marks: {
         x: {
-            pos: [0,0,2],
+            pos: [0,0,4],
             card:'E',
             mark:null
         },
         z: {
-            pos: [2,0,0],
+            pos: [4,0,0],
             card:'N',
             mark:null
         },
@@ -434,36 +470,22 @@ const view = {
             CTL.cam.cube.matrix.copy(CTL.cam.cube.userData.originalMatrix);
             CTL.cam.cube.updateMatrix();
             init_vars.model.position.set(0, 0, 0);
+            view.redraw();
             view.update();
         },
         camera_auto_rotate(){
             init_vars.model.userData.camera_auto_rotate = !init_vars.model.userData.camera_auto_rotate;
             this.classList.toggle('control-toggle');
         },
-        navigation_state(){
-            vars.view.navigation_active = !vars.view.navigation_active;
-            this.classList.toggle('control-toggle');
-            q_nav_bar.style.display = 'block';
-            window_redraw();
-        },
-        instructions_state(){
-            //set previously on page
-            // vars.view.instructions_active = !vars.view.instructions_active;
-            // this.classList.toggle('control-toggle');
-            // const instructions_slide = document.getElementById('intro-instructions');
-            // instructions_slide.style.display = display_array[+vars.view.instructions_active];//'block';
-        },
         protected_areas_state(){
             init_vars.protected_areas_visible = !init_vars.protected_areas_visible;
             this.classList.toggle('control-toggle');
-
             if(MAP.object.children.length){
                 MAP.object.children.forEach(s => {
-                    s.userData.owner.toggle_attribute('protected_areas', init_vars.protected_areas_visible);
-                });
+                    if(s.sector) s.userData.owner.toggle_attribute('protected_areas', init_vars.protected_areas_visible);
+                })
             }
-
-            //control_appearance_sectors('mpa_s', init_vars.protected_area_visible );
+            MDL.layers.protected_areas.visible = init_vars.protected_areas_visible;
         },
         scroll_to_downloads(){
             const box = document.getElementById('output').getBoundingClientRect();
@@ -511,6 +533,7 @@ const view = {
 
                     el.dom_element = document.getElementById('wudi-selection-temp').cloneNode(true);
                     el.dom_element.classList.remove('hidden');
+                    el.dom_element.setAttribute('id', 'wudi-selection-'+pid);
                     el.dom_element.setAttribute('data-pid', pid);
 
                     const el_label = el.dom_element.getElementsByClassName('label')[0];
@@ -589,35 +612,44 @@ const view = {
                 }
             },
             make(pid){
-                //alert('secondary: ' + interactive.selection);
+
                 const data_index = DAT.DATA.CONF.wudi_index[parseInt(pid)];
+                //test
+                console.log('ui_control.wudi_point_select.make args:', pid, data_index, interactive.selection);
+
                 DAT.SELECTOR.point.select(data_index);
                 view.ui_control.wudi_point_select.update_selection();
-
                 const sta = DAT.SELECTOR.point.data.selected.includes(data_index);
 
-                //if(!DAT.SELECTOR.point.data.selected.includes(data_index)){
-                interactive.element_update.set_state(interactive.selection, sta, true);
-                MDL.point_selector.top_arr.object.visible = sta;
+                if(interactive.selection !== null) interactive.element_update.set_state(interactive.selection, sta, true);
                 if(!sta) interactive.selection = null;
+
+                MDL.point_selector.top_arr.object.visible = sta;
+
+
 
             },
             label_event(evt_object){
                 let index, state, type;
-                if(evt_object.target){
-                    type = evt_object.type === 'mouseenter' ? 'hover' : 'click';
-                    index = type === 'hover' ? evt_object.target.dataset['pid'] : evt_object.target.parentNode.dataset['pid'];
-                    state = false;
-                }
+                const label = evt_object.target.closest('.wudi-selection');
+                ///console.log();
+
+                type = evt_object.type === 'mouseenter' ? 'hover' : 'click';
+                index = label.dataset['pid'];
+                state = false;
+
 
                 const data_index = DAT.DATA.CONF.wudi_index_reverse[index];
+                console.warn('label_event', data_index, index, type);
 
-                if(type === 'hover'){
-                    interactive.check(MDL.point_selector.select('wudi_points', {'index':data_index}, DAT, CTL.cam));
-                }
 
-                if(type === 'click'){
-                    view.ui_control.wudi_point_select.make(data_index);
+                if(data_index !== undefined){
+                    if (type === 'hover') {
+                        interactive.check(MDL.point_selector.select('wudi_points', {'index': data_index}, DAT, CTL.cam));
+                    }
+                    if (type === 'click') {
+                        view.ui_control.wudi_point_select.make(data_index);
+                    }
                 }
 
                 // const element = Object.keys(interactive.hash_info_store).filter(h => interactive.hash_info_store[h].index === data_index);
@@ -637,8 +669,15 @@ const view = {
                 const b_state = parent.dataset.state === 'true';
                 view.ui_control.button_check_box.set_state(parent.id, !b_state);
                 if(parent.dataset.layer){
-                    const wudi_layer = MDL.container.getObjectByName('wudi_'+parent.dataset.layer);
+                    const wudi_layer = init_vars.wudi_model.getObjectByName('wudi_'+parent.dataset.layer);
                     wudi_layer.visible = !b_state;
+
+                    const layers = init_vars.wudi_model.children[0];
+
+                    const sta = (layers.children[0].visible === true && layers.children[1].visible === true);
+
+                    layers.children[2].visible = sta;
+                    //init_vars.wudi_model.updateMatrix();
                 }
             }
         }
@@ -655,8 +694,23 @@ const view = {
         dom_element: null,
         dom_selection_element: null,
         text: 'null',
-        rect: null,
-        stem: null,
+        elements:{
+            basic:{
+                rect: null,
+                stem: null,
+                screen_position: {
+                    a: new THREE.Vector2(),
+                }
+            },
+            selection:{
+                rect: null,
+                stem: null,
+                screen_position: {
+                    a: new THREE.Vector2(),
+                }
+            }
+        },
+
         init() {
             this.dom_element = document.getElementById('info-field');
 
@@ -664,15 +718,21 @@ const view = {
             this.dom_selection_element = this.dom_element.cloneNode(true);
             this.dom_selection_element.setAttribute('id','info-field-super');
             this.dom_element.parentNode.appendChild(this.dom_selection_element);
+            this.dom_selection_element.style.backgroundColor = jsConfig.colors.window_overlay;
+            this.elements.selection.stem = this.dom_selection_element.querySelector('.info-stem');
+
+            this.display_element_super = this.dom_selection_element.querySelector('.info-body');
 
             this.display_element = this.dom_element.querySelector('.info-body');
+            //this.display_element.style.whiteSpace = 'nowrap';
+
             this.temp_element = this.dom_element.querySelector('.info-temp');
-            this.stem = this.dom_element.querySelector('.info-stem');
+            this.elements.basic.stem = this.dom_element.querySelector('.info-stem');
 
             this.dom_element.querySelector('.info-head').innerHTML = this.text.toString();
             this.dom_element.style.backgroundColor = jsConfig.colors.window_overlay;
             this.dom_element.classList.remove('hidden');
-            this.rect = this.dom_element.getBoundingClientRect();
+            this.elements.basic.rect = this.dom_element.getBoundingClientRect();
         },
         hover(e) {
             this.style.color = '#FFFFFF';
@@ -684,75 +744,45 @@ const view = {
         //     this.target_lock = true;
         //     this.lock_position.x = this.delegate_position
         // },
-        set_position(x, y, style = 'area') {
-            //console.log(style);
+        set_position(x, y, element='basic', style = 'default') {
 
-            if (style === 'area') {
-                const nx = (view.model_width / 2) - x;
-                const ny = (view.model_height / 2) - y;
-                const mod = 0.8;
-                const x_offset = (Math.abs(nx) > (view.model_width / 2) * mod) ? ((view.model_width / 2) / Math.abs(nx)) * mod : 1;
-                const y_offset = (Math.abs(ny) > (view.model_height / 2) * mod) ? ((view.model_height / 2) / Math.abs(ny)) * mod : 1;
+            const in_bounds = (x > view.model_width/-2 && x < view.model_width + view.model_width/2 && y > view.model_height/-2 && y < view.model_height + view.model_height/2);
 
-                if (x_offset !== 1 || y_offset !== 1) {
-                    this.screen_position.a.set((view.model_width / 2) - (nx * x_offset), (view.model_height / 2) - (ny * y_offset));
-                } else {
-                    this.screen_position.a.set(x, y);
+            const dom_which = element === 'basic' ? this.dom_element : this.dom_selection_element;
+            if(this.elements[element].state) dom_which.style.display = in_bounds ? 'block' : 'none';
+
+            if (style === 'default') {
+                let px, py, sth, sty, stx;
+                const offset = 80;
+                const pad = 16;
+                const rw = this.elements[element].rect.width;
+                const rh = this.elements[element].rect.height;
+                px = x - (rw / 2);
+                py = y + (offset);
+                sty = (y-py);
+                sth = (py-y);
+                stx = (rw / 2);
+
+                //up/down
+                if(py + rh > view.model_height){
+                    py = (y - (offset)) - rh;
+                    sty = rh;
+                    if( py + rh > view.model_height) py = (view.model_height - pad) - rh;
+                    if( py + rh + sth > view.model_height) sth = view.model_height - (py + rh);
                 }
-            } else if (style === 'mouse'){
-                //default to right center of mouse
-                //const pos_x = this.rect.width
-                if(this.target_lock){
-                    this.dom_element.style['pointer-events'] = 'all';
-                    this.dom_element.classList.add('select');
-                    x = this.lock_position.x;
-                    y = this.lock_position.y;
-                }else{
-                    this.dom_element.classList.remove('select');
-                    this.dom_element.style['pointer-events'] = 'none';
-                }
-                let px, py;
-                const offset = 10;
-                if(y - (this.rect.height / 2) < 0){
-                    //too far up
-                    px = x;
-                    py =  y + (this.rect.height / 2) + offset;
-                }else if (y + (this.rect.height / 2) > view.model_height) {
-                    //too far down
-                    px = x;
-                    py = y - (this.rect.height / 2) - offset;
-                }else if (x + this.rect.width + offset > view.model_width) {
-                    //too far right
-                    px = x - (this.rect.width / 2) - offset;
-                    py = y;
-                }else{
-                    px = x + (this.rect.width / 2) + offset;
-                    py = y;
-                }
+                //left
+                if(px < pad) px = pad;
+                if(x < pad + (rw / 2)) stx = x - pad;
+                //right
+                if(px + rw > view.model_width - pad) px = view.model_width - pad - rw;
+                if(x < view.model_width - pad && x > px + stx) stx = rw - (view.model_width - pad - x);
 
-                this.screen_position.a.set(px, py);
-                this.screen_position.b.set(px, py);
+                const bounds_x = ((x > pad) && (x < (view.model_width - pad)));
+                this.elements[element].stem.style.display = ['none','block'][+bounds_x];
+                this.elements[element].stem.style.left = (stx)+'px';
+                this.elements[element].stem.style.top = Math.round(sty)+'px';
+                this.elements[element].stem.style.height = Math.round(sth)+'px';
 
-            } else if (style === 'off-axis'){
-                //this.rect = this.dom_element.getBoundingClientRect();
-
-                if(this.target_lock){
-                    this.dom_element.style['pointer-events'] = 'all';
-                    this.dom_element.classList.add('select');
-                    x = this.lock_position.x;
-                    y = this.lock_position.y;
-                }else{
-                    this.dom_element.classList.remove('select');
-                    this.dom_element.style['pointer-events'] = 'none';
-                }
-
-                let px, py;
-                const offset = 10;
-                px = x - (this.rect.width / 2);
-                py = (view.model_height - offset) - (this.rect.height);
-                this.stem.style.left = (this.rect.width / 2)+'px';
-                this.stem.style.top = (y-py)+'px';
-                this.stem.style.height = (py-(y))+'px';
                 // if(y - (this.rect.height / 2) < 0){
                 //     //too far up
                 //     px = x;
@@ -770,16 +800,105 @@ const view = {
                 //     py = y;
                 // }
 
-                this.screen_position.a.set(px, py);
-                this.screen_position.b.set(px, py);
-
+                this.elements[element].screen_position.a.set(px, py);
+                //this.screen_position.b.set(px, py);
             }
-            // this.dom_element.style.left = (this.screen_position.a.x - (this.rect.width / 2)).toFixed(2) + 'px';
-            // this.dom_element.style.top = (this.screen_position.a.y - (this.rect.height / 2)).toFixed(2) + 'px';
+
+            //console.log(style);
+            //
+            // if (style === 'area') {
+            //     const nx = (view.model_width / 2) - x;
+            //     const ny = (view.model_height / 2) - y;
+            //     const mod = 0.8;
+            //     const x_offset = (Math.abs(nx) > (view.model_width / 2) * mod) ? ((view.model_width / 2) / Math.abs(nx)) * mod : 1;
+            //     const y_offset = (Math.abs(ny) > (view.model_height / 2) * mod) ? ((view.model_height / 2) / Math.abs(ny)) * mod : 1;
+            //
+            //     if (x_offset !== 1 || y_offset !== 1) {
+            //         this.screen_position.a.set((view.model_width / 2) - (nx * x_offset), (view.model_height / 2) - (ny * y_offset));
+            //     } else {
+            //         this.screen_position.a.set(x, y);
+            //     }
+            // } else if (style === 'mouse'){
+            //     //default to right center of mouse
+            //     //const pos_x = this.rect.width
+            //     if(this.target_lock){
+            //         this.dom_element.style['pointer-events'] = 'all';
+            //         this.dom_element.classList.add('select');
+            //         x = this.lock_position.x;
+            //         y = this.lock_position.y;
+            //     }else{
+            //         this.dom_element.classList.remove('select');
+            //         this.dom_element.style['pointer-events'] = 'none';
+            //     }
+            //     let px, py;
+            //     const offset = 10;
+            //     if(y - (this.rect.height / 2) < 0){
+            //         //too far up
+            //         px = x;
+            //         py =  y + (this.rect.height / 2) + offset;
+            //     }else if (y + (this.rect.height / 2) > view.model_height) {
+            //         //too far down
+            //         px = x;
+            //         py = y - (this.rect.height / 2) - offset;
+            //     }else if (x + this.rect.width + offset > view.model_width) {
+            //         //too far right
+            //         px = x - (this.rect.width / 2) - offset;
+            //         py = y;
+            //     }else{
+            //         px = x + (this.rect.width / 2) + offset;
+            //         py = y;
+            //     }
+            //
+            //     this.screen_position.a.set(px, py);
+            //     this.screen_position.b.set(px, py);
+            //
+            // } else if (style === 'off-axis'){
+            //     //this.rect = this.dom_element.getBoundingClientRect();
+            //
+            //     if(this.target_lock){
+            //         this.dom_element.style['pointer-events'] = 'all';
+            //         this.dom_element.classList.add('select');
+            //         x = this.lock_position.x;
+            //         y = this.lock_position.y;
+            //     }else{
+            //         this.dom_element.classList.remove('select');
+            //         this.dom_element.style['pointer-events'] = 'none';
+            //     }
+            //
+            //     let px, py;
+            //     const offset = 10;
+            //     px = x - (this.rect.width / 2);
+            //     py = (view.model_height - offset) - (this.rect.height);
+            //     this.stem.style.left = ((this.rect.width / 2)-0.5).toFixed(1)+'px';
+            //     this.stem.style.top = (y-py)+'px';
+            //     this.stem.style.height = (py-(y))+'px';
+            //     // if(y - (this.rect.height / 2) < 0){
+            //     //     //too far up
+            //     //     px = x;
+            //     //     py =  y + (this.rect.height / 2) + offset;
+            //     // }else if (y + (this.rect.height / 2) > view.model_height) {
+            //     //     //too far down
+            //     //     px = x;
+            //     //     py = y - (this.rect.height / 2) - offset;
+            //     // }else if (x + this.rect.width + offset > view.model_width) {
+            //     //     //too far right
+            //     //     px = x - (this.rect.width / 2) - offset;
+            //     //     py = y;
+            //     // }else{
+            //     //     px = x + (this.rect.width / 2) + offset;
+            //     //     py = y;
+            //     // }
+            //
+            //     this.screen_position.a.set(px, py);
+            //     this.screen_position.b.set(px, py);
+            //
+            // }
+            // // this.dom_element.style.left = (this.screen_position.a.x - (this.rect.width / 2)).toFixed(2) + 'px';
+            // // this.dom_element.style.top = (this.screen_position.a.y - (this.rect.height / 2)).toFixed(2) + 'px';
 
 
             // this.stem.style.height = (this.rect.width / 2);
-            this.update_position();
+            this.update_position(element);
         },
         drag_position(delta_x, delta_y) {
             view.vc.a.set(delta_x, delta_y, 0.0);
@@ -789,8 +908,10 @@ const view = {
             // this.dom_element.style.top = (this.screen_position.a.y - (this.rect.height / 2)).toFixed(2) + 'px';
             this.screen_position.b.copy(this.screen_position.a);
         },
-        set_state(bool) {
-            this.dom_element.style.display = bool ? 'block' : 'none';
+        set_state(bool, element = 'basic') {
+            const dom_which = element === 'basic' ? this.dom_element : this.dom_selection_element;
+            dom_which.style.display = bool ? 'block' : 'none';
+            this.elements[element].state = bool;
         },
         set_text(text_dict, mode = null) {
             this.display_element.innerHTML = '';
@@ -821,22 +942,30 @@ const view = {
                 }
                 this.display_element.appendChild(part);
             }
-            this.rect = this.dom_element.getBoundingClientRect();
+            this.elements.basic.rect = this.dom_element.getBoundingClientRect();
         },
-        update_position() {
+        clone() {
+            this.display_element_super.innerHTML = this.display_element.innerHTML;
+            this.dom_selection_element.classList.remove('hidden');
+            this.dom_selection_element.style.left = (this.elements.selection.screen_position.a.x).toFixed(2) + 'px';
+            this.dom_selection_element.style.top = (this.elements.selection.screen_position.a.y).toFixed(2) + 'px';
+            this.elements.selection.rect = this.elements.basic.rect;//Object.assign({}, this.elements.basic.rect);
+            console.log(this.elements.selection.rect);
+            console.log(this.elements.selection.screen_position);
+        },
+        update_position(element='basic') {
             // if(this.target_lock){
             //     vu.copy(this.lock_position);
             //     projected(vu);
             //     this.screen_position.a.set(vu.x,vu.y);
             // }
-            this.dom_element.style.left = (this.screen_position.a.x).toFixed(2) + 'px';
-            this.dom_element.style.top = (this.screen_position.a.y).toFixed(2) + 'px';
+            const dom_which = element === 'basic' ? this.dom_element : this.dom_selection_element;
+            dom_which.style.left = (this.elements[element].screen_position.a.x).toFixed(2) + 'px';
+            dom_which.style.top = (this.elements[element].screen_position.a.y).toFixed(2) + 'px';
             //this.screen_position.b.lerp(this.screen_position.a, 0.3);
             // this.dom_element.style.left = (this.screen_position.b.x - (this.rect.width / 2)).toFixed(2) + 'px';
             // this.dom_element.style.top = (this.screen_position.b.y - (this.rect.height / 2)).toFixed(2) + 'px';
         },
-
-
     },
     make_position_mark(radius) {
         const curve = new THREE.EllipseCurve(
@@ -885,6 +1014,7 @@ const view = {
         return marks;
     },
     run_optics(){
+        CTL.cam.max_zoom = view.max_allowable_zoom;
         CTL.cam.camera_scale = 1 - (CTL.cam.distance / view.max_allowable_zoom);
         view.user_map_position.copy(init_vars.model.position).negate();
         MDL.model_position(view.user_map_position);
@@ -1068,6 +1198,10 @@ const view = {
         init_vars.model.position.set(0,0,0);
         init_vars.model.updateMatrix();
 
+        init_vars.map_model.matrixAutoUpdate = false;
+        init_vars.wudi_model.matrixAutoUpdate = false;
+        // init_vars.super_model.rotateX(Math.PI/-2);
+
         if(init_vars.view.features.beautiful_position_lines.on) {
             ['x','z','y','d'].map(a =>{
                 view.position_marks[a].mark = view.make_dom_mark(view.ticks.dom);
@@ -1204,9 +1338,21 @@ const view = {
                    }
                 });
 
-                const b_lines = RUN.objects.beautiful_position_lines.children[0];
-                util.set_buffer_at_index(b_lines.geometry.attributes.position.array, 5, [0,-depth,0]);
-                b_lines.geometry.attributes.position.needsUpdate = true;
+                // const b_lines = RUN.objects.beautiful_position_lines.children[0];
+                // util.set_buffer_at_index(b_lines.geometry.attributes.position.array, 5, [0,-depth,0]);
+                // b_lines.geometry.attributes.position.needsUpdate = true;
+                if(MAP.ray) {
+                    //view.vc.b.set(0, -depth, 0);
+                    //console.log(view.user_map_position, init_vars.model.position);
+                    view.vc.e.set(MDL.center.x-init_vars.model.position.x, MDL.center.y+init_vars.model.position.z, 0);
+                    ///view.vc.e.set(init_vars.model.position.x-MDL.center.x, init_vars.model.position.z-MDL.center.y, 0.0);
+                    view.vc.b.copy(view.vc.e).setZ(-depth);
+                    MAP.ray.set(view.vc.e, view.vc.b);
+                }
+                // util.set_buffer_at_index(b_lines.geometry.attributes.position.array, 5, [0,-depth,0]);
+                // b_lines.geometry.attributes.position.needsUpdate = true;
+
+
 
                 mark_dom.textContent = `${Math.round(depth * jsConfig.contours.depth_max)}${mark.card}`;
                 mark_dom.rect = mark_dom.getBoundingClientRect();
@@ -1225,15 +1371,13 @@ const view = {
 
         RUN.objects.beautiful_position_lines.position.copy(init_vars.model.position).negate();//CTL.v.user.mouse.actual).negate();
 
-
-
     },
     update(anything=null){
 
         if(CAM.mover.is_moving){
             init_vars.model.position.copy(CAM.mover.pos).negate();
         }else{
-            console.log(init_vars.model.position, CAM.mover.pos);
+            //console.log(init_vars.model.position, CAM.mover.pos);
             CAM.mover.pos.copy(init_vars.model.position).negate();
         }
 
@@ -1241,8 +1385,8 @@ const view = {
         if(init_vars.view.features.position_lines.on) RUN.objects.position_lines.position.copy(init_vars.model.position).negate();
         if(init_vars.view.features.tools.on){
             // RUN.objects.tools.mover_marker.position.copy(CAM.mover.pos);
-            // view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
-            // RUN.objects.tools.set(CAM.mover.pos, view.vc.a);
+            view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
+            RUN.objects.tools.set(CAM.mover.pos, view.vc.a);
         }//nothing
 
         CTL.cam.run();
@@ -1257,37 +1401,67 @@ const view = {
         if(view.READY){
             MDL.position_marker.scale.setScalar((1-CTL.cam.camera_scale) * (MDL.width/2));
 
-            if(CAM.mover.is_moving) {
-                view.vc.a.copy(MDL.point_selector.object.position);
+            if(interactive.selection === null) {
+                view.ui_info.set_state(false, 'selection');
+            }else{
+                view.vc.a.copy(interactive.selection_origin);//.copy(MDL.point_selector.object.position);MDL.point_selector.object.position);
                 MDL.container.localToWorld(view.vc.a);
                 util.projected(view.vc.a, CTL.cam.camera, view.model_width, view.model_height);
-                view.ui_info.set_position(view.vc.a.x, view.vc.a.y, 'off-axis');
-            }else{
+                view.ui_info.set_position(view.vc.a.x, view.vc.a.y, 'selection');
+            }
+
+            if(!CAM.mover.is_moving) {
                 view.vc.b.copy(CTL.v.user.mouse.plane_pos);
                 MDL.container.worldToLocal(view.vc.b);
                 MDL.user_position_marker.position.copy(view.vc.b);
             }
 
-            MDL.layers.update.places(DAT, CTL.cam);
             MDL.layers.update.wudi_points(DAT, CTL.cam);
+            MDL.layers.update.places(DAT, CTL.cam);
+            MDL.layers.update.protected_areas(CTL.cam);
 
             view.vc.a.set(-CTL.cam.pos.x, 0.0, -CTL.cam.pos.z);
             MAP.update(CTL.cam, view.vc.a);
             view.ui_control.wudi_point_select.update();
         }
+
+        //
+
+        init_vars.map_model.matrix.copy(init_vars.model.matrix);
+        init_vars.wudi_model.matrix.copy(init_vars.model.matrix);
+        //init_vars.super_model.position.copy(init_vars.model.position);
+
+    },
+    modified_callback(){
+        //alert('data modified');
+        if(interactive.selection !== null){
+            const k_sek_part = interactive.hash_info_store[interactive.selection];
+            if(k_sek_part.cat === 'wudi_points') {
+                const k_text = interactive.element_info_filter.wudi_points(k_sek_part.index);
+                view.ui_info.set_state(true);
+                view.ui_info.set_text([k_text]);
+                view.ui_info.clone();
+                view.ui_info.set_state(false);
+            }
+        }
+        return true;
     },
     post_init(){
+        view.run_optics();
+        console.error('post_init');
         view.READY = true;
         view.vc.a.copy(init_vars.model.position);
         MDL.position_marker.position.set(-view.vc.a.x, view.vc.a.z, 0.0);
         MDL.position_marker.scale.setScalar((1-CTL.cam.camera_scale) * (MDL.width/2));
 
-        MDL.layers.make.places(DAT.DATA);
+        MDL.layers.make.places(DAT.DATA, CTL.cam);
+        MDL.layers.make.protected_areas(DAT.DATA, CTL.cam);
+
         MDL.layers.make.iso_bath(DAT.DATA);
         MDL.layers.make.wudi_points_instance(DAT.DATA);
 
         MAP.protected_areas = DAT.DATA.SD.protected_areas;
-        MAP.init(MDL);
+        MAP.init(MDL, init_vars.map_model, CTL.cam);
 
         MDL.layers.update.wudi_points(DAT, CTL.cam);
         MDL.layers.update.places(DAT, CTL.cam);
@@ -1298,7 +1472,7 @@ const view = {
         init_vars.protected_areas_visible = jsConfig.protected_areas_default;
 
         view.update();
-    }
+    },
 }
 
 //#set this up so that the clicked-selection is saved
@@ -1442,7 +1616,9 @@ const interactive = {
                     if(pc.userData.index === element.index && pc.visible === true){
                         const t_element = new THREE.Group();
                         pc.userData.outline.map(o => {
-                            const pro_mat = new THREE.LineBasicMaterial({color: jsConfig.colors.mpa_s_designated});
+                            //jsConfig.colors.mpa_s_designated
+                            const p_col = new THREE.Color().fromArray(pc.children[0].geometry.attributes.color.array);
+                            const pro_mat = new THREE.LineBasicMaterial({color: p_col});
                             const geometry = new THREE.BufferGeometry();
                             geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(o), 3));
                             const p_pline = new THREE.Line(geometry, pro_mat);
@@ -1505,10 +1681,14 @@ const interactive = {
                     interactive.element_update[element.cat](element, reset);
                 }
             }
+        },
+        set_wudi_selection_text(){
+
         }
     },
     hash: [],
     hash_objects: [],
+    info_text: [],
     hash_info_store: {},
     hash_changed: false,
     hash_priority:{
@@ -1521,6 +1701,35 @@ const interactive = {
     },
     selection: null,
     selection_category: null,
+    selection_origin: new THREE.Vector3(),
+    selection_object:{
+        object: null,
+        point: new THREE.Vector3(),
+        id: null,
+        depth_select(){
+
+            const base_color = view.vc.color.set(jsConfig.mats.contours.dict.color).toArray();
+            const high_color = view.vc.color.set(jsConfig.mats.contours.dict.color).offsetHSL(0,0,0.25).toArray();
+
+            if(MAP.object.children.length){
+                MAP.object.children.forEach(s => {
+                    if(s.sector){
+                        const relevant = s.children.filter(s_sub => (s_sub.userData.type === 'contours' && s_sub.visible));
+                        relevant.map(contours => contours.children.map(c=> {
+                            if (c.userData.depth) {
+                                const k = interactive.selection_object.object === null ? null : interactive.selection_object.object.userData.depth;
+                                if (c.userData.depth === k){
+                                    c.userData.setColors(high_color);
+                                } else {
+                                    c.userData.setColors(base_color);
+                                }
+                            }
+                        }))
+                    }
+                })
+            }
+        }
+    },
     get_screen_pos(source){
         view.vc.a.copy(source.position);
         MDL.container.localToWorld(view.vc.a);
@@ -1532,22 +1741,32 @@ const interactive = {
         const hash = [];
         const limits = [];
         let wudi_polled = false;
-        let depth_polled = true;//false;
+        let depth_polled = false;//true;//false;
+        interactive.selection_object.object = null;
 
         for(let i = 0; i < intersects.length; i++){
+
             let I = intersects[i].object;
             if (I.interactive && (I.parent.visible && I.visible)) {
 
                 if (I.type === 'Line' && limits.includes(I.uuid)) continue;
-                if (!limits.includes(I.uuid)) limits.push(I.uuid);
+                if (I.userData.is_depth_map) break;
+
+                if (!limits.includes(I.uuid)){
+                    limits.push(I.uuid);
+                    interactive.selection_object.object = I;
+                    interactive.selection_object.id = I.uuid;
+                    interactive.selection_object.point.copy(intersects[i].point);
+                }
 
                 let cat_name = I.name;
                 let index = intersects[i].instanceId ? intersects[i].instanceId : null;
 
                 let is_depth = cat_name.indexOf('depth_contour') !== -1;
+
                 let is_wudi = cat_name.indexOf('wudi') !== -1;
 
-                if(is_depth) continue;
+                //if(is_depth) continue;
 
                 if(I.name === 'place_label'){
                     if(force_wudi !== null) continue;
@@ -1603,6 +1822,8 @@ const interactive = {
 
                 if(is_wudi && force_wudi === null) wudi_polled = true;
                 if(is_depth) depth_polled = true;
+
+
             }
         }
 
@@ -1620,7 +1841,10 @@ const interactive = {
             CTL.ray_caster.setFromCamera(CTL.v.user.mouse.raw, CTL.cam.camera);  //n_pos[1], CTL.cam.camera);
         }
 
-        const intersects = CTL.ray_caster.intersectObjects(MDL.container.children);
+        const intersects = CTL.ray_caster.intersectObjects(init_vars.wudi_model.children);
+        intersects.push(...CTL.ray_caster.intersectObjects(MDL.container.children));
+        intersects.push(...CTL.ray_caster.intersectObjects(init_vars.map_model.children));
+
         const current_hash = interactive.clean(intersects, force_selection);
         let delta = false;
 
@@ -1641,27 +1865,37 @@ const interactive = {
             }
         });
 
-
         if(delta && interactive.hash.length){
             interactive.hash_objects = interactive.hash.map(h => {return interactive.hash_info_store[h]});
             interactive.hash_objects.sort((a, b) => a.priority > b.priority ? -1 : 1);
-            const ui_info_text = [];
+            interactive.info_text = [];
             interactive.hash_objects.map(h =>{
-                const record = interactive.element_info_filter[h.cat](h.index, h);
-                h.area = record.area ? record.area : 0;
-                ui_info_text.push(record);
+                if(h.name !== interactive.selection){
+                    const record = interactive.element_info_filter[h.cat](h.index, h);
+                    h.area = record.area ? record.area : 0;
+                    interactive.info_text.push(record);
+                }
             });
-            ui_info_text.sort((a, b) => a.area < b.area ? -1 : 1);
-            interactive.hash_objects.sort((a, b) => a.area < b.area ? -1 : 1);
 
-            init_vars.trace.watched['interactive'] = interactive.hash;
-            view.ui_info.set_state(true);
-            view.ui_info.set_text(ui_info_text);
+            if(interactive.info_text.length > 0) {
+                interactive.info_text.sort((a, b) => a.area < b.area ? -1 : 1);
+                interactive.hash_objects.sort((a, b) => a.area < b.area ? -1 : 1);
+                init_vars.trace.watched['interactive'] = interactive.hash;
+                view.ui_info.set_state(true);
+                view.ui_info.set_text(interactive.info_text);
+                //test
+                //interactive.hash_objects.map((o,i)=>{console.log(i, o.name)});
+            }
 
-            interactive.hash_objects.map((o,i)=>{console.log(i, o.name)});
+            if(interactive.selection_object.object !== null){
+                view.vc.b.copy(interactive.selection_object.point);
+                MDL.container.worldToLocal(view.vc.b);
+                MDL.user_position_marker.position.copy(view.vc.b);
+                interactive.selection_object.depth_select();
+                //MDL.user_position_marker.position.copy(interactive.selection_object.point);
+            }
 
             const top_element = interactive.hash_objects[0];
-
             if(force_selection === null) {
                 if(['wudi_points', 'places', 'protected_areas'].includes(top_element.cat)){
                     MDL.point_selector.select(top_element.cat, {'index': top_element.index}, DAT, CTL.cam);
@@ -1673,12 +1907,11 @@ const interactive = {
             //     const n_pos = interactive.map_position(force_selection);
             //     view.ui_info.set_position(n_pos[0].x, 0.0, 'off-axis');
             // }else{
-            //    
+            //
             // }
             const ui_pos = interactive.get_screen_pos(MDL.user_position_marker);
-            view.ui_info.set_position(ui_pos.x, ui_pos.y, 'off-axis');
+            view.ui_info.set_position(ui_pos.x, ui_pos.y);//, 'off-axis');
 
-            //
         }
 
 
@@ -1698,9 +1931,17 @@ const interactive = {
                     if (top_element.cat === 'places' || top_element.cat === 'protected_areas') {
                         view.ui_info.target_lock = true;
                         //view.ui_info.lock_position = n_pos[0];
-                        const ktx = interactive.element_info_filter_secondary[top_element.cat](top_element.index);
+                        interactive.info_text = interactive.element_info_filter_secondary[top_element.cat](top_element.index);
+                        //view.ui_info.set_state(true);
                         view.ui_info.set_state(true);
-                        view.ui_info.set_text([ktx]);
+                        view.ui_info.set_text([interactive.info_text]);
+                        view.ui_info.clone();
+                        view.ui_info.set_state(true, 'selection');
+                        view.ui_info.set_state(false);
+
+                        MDL.user_position_marker.position.copy(MDL.point_selector.object.position);
+                        const ui_pos = interactive.get_screen_pos(MDL.user_position_marker);
+                        view.ui_info.set_position(ui_pos.x, ui_pos.y);//, 'off-axis');
                         //view.ui_info.set_position(n_pos[0].x, n_pos[0].y, 'mouse');
                     }
 
@@ -1711,200 +1952,54 @@ const interactive = {
                     interactive.selection_category = top_element.cat;
                     obs.innerHTML = interactive.selection;
 
-                }
+                    if(top_element.primary) {
+                        interactive.selection_origin.copy(MDL.point_selector.object.position);
+
+                        if (top_element.cat === 'wudi_points') {
+                            //interactive.element_update.set_state(top_element.name, true);
 
 
+                            view.ui_info.set_text([interactive.info_text[0]]);
+                            view.ui_info.clone();
+                            view.ui_info.set_state(false);
+                            view.ui_info.set_state(true, 'selection');
+                            MDL.point_selector.move_to(CAM);
 
-
-                if(top_element.primary) {
-                    if (top_element.cat === 'wudi_points') {
-                        //interactive.element_update.set_state(top_element.name, true);
-                        MDL.point_selector.move_to(CAM);
-                        // view.vc.a.copy(MDL.point_selector.object.position);
-                        // view.vc.b.set(view.vc.a.x, 0.0, -view.vc.a.y);
-                        // //init_vars.model.localToWorld(view.vc.a);
-                        // CAM.mover.set_target(CAM.mover.pos, view.vc.b, 2.0);
-                        // CAM.mover.set_rotation_target(MDL.point_selector.offset_angle, true);
-                        // const data_index = DAT.DATA.CONF.wudi_index[top_element.index];
-                        // DAT.SELECTOR.point.select(data_index);
-                        // view.ui_control.wudi_point_select.update_selection();
+                            // view.vc.a.copy(MDL.point_selector.object.position);
+                            // view.vc.b.set(view.vc.a.x, 0.0, -view.vc.a.y);
+                            // //init_vars.model.localToWorld(view.vc.a);
+                            // CAM.mover.set_target(CAM.mover.pos, view.vc.b, 2.0);
+                            // CAM.mover.set_rotation_target(MDL.point_selector.offset_angle, true);
+                            // const data_index = DAT.DATA.CONF.wudi_index[top_element.index];
+                            // DAT.SELECTOR.point.select(data_index);
+                            // view.ui_control.wudi_point_select.update_selection();
+                        }
+                        if (top_element.cat === 'places' || top_element.cat === 'protected_areas') {
+                            // view.ui_info.target_lock = true;
+                            // //view.ui_info.lock_position = n_pos[0];
+                            //
+                            // const ktx = interactive.element_info_filter_secondary[top_element.cat](top_element.index);
+                            // view.ui_info.set_state(true);
+                            // view.ui_info.set_text([ktx]);
+                            //view.ui_info.set_position(n_pos[0].x, n_pos[0].y, 'mouse');
+                            view.ui_info.set_text([interactive.info_text[0]]);
+                            view.ui_info.clone();
+                            view.ui_info.set_state(false);
+                            view.ui_info.set_state(true, 'selection');
+                            MDL.point_selector.move_to(CAM);
+                        }
                     }
-                    if (top_element.cat === 'places' || top_element.cat === 'protected_areas') {
-                        // view.ui_info.target_lock = true;
-                        // //view.ui_info.lock_position = n_pos[0];
-                        //
-                        // const ktx = interactive.element_info_filter_secondary[top_element.cat](top_element.index);
-                        // view.ui_info.set_state(true);
-                        // view.ui_info.set_text([ktx]);
-                        //view.ui_info.set_position(n_pos[0].x, n_pos[0].y, 'mouse');
-                        MDL.point_selector.move_to(CAM);
-                    }
+
                 }
             }
 
         }else{
+            interactive.selection_object.depth_select();
             view.ui_info.target_lock = false;
             view.ui_info.set_state(false);
         }
 
         return false;
-        //if(force_selection !== null) interactive.hash_changed = true;
-
-        if(interactive.hash_changed){
-            interactive.hash_objects = interactive.hash.map(h => {return interactive.hash_info_store[h]});
-            interactive.hash_objects.sort((a, b) => a.priority > b.priority ? -1 : 1);
-            const ui_info_text = [];
-
-            interactive.hash_objects.map(h =>{
-                const record = interactive.element_info_filter[h.cat](h.index, h);
-                h.area = record.area ? record.area : 0;
-                ui_info_text.push(record);
-            });
-
-            ui_info_text.sort((a, b) => a.area < b.area ? -1 : 1);
-            interactive.hash_objects.sort((a, b) => a.area < b.area ? -1 : 1);
-
-            init_vars.trace.watched['interactive'] = interactive.hash;
-            view.ui_info.set_state(true);
-            view.ui_info.set_text(ui_info_text);
-
-            //const n_pos = interactive.map_position();
-            view.ui_info.set_position(n_pos[0].x, 0.0, 'off-axis');//n_pos[0].y, 'mouse');
-
-            interactive.hash_objects.map((h, n) => {
-                if(!MDL.outliner.userData.active.includes(h.name)){
-                    MDL.outliner.userData.active.push(h.name);
-                    if (h.cat === 'protected_areas') {
-                        //find the relevant zoom level of this object
-                        h.obj.parent.parent.children.map(pc=>{
-                            if(pc.userData.index === h.index && pc.visible === true){
-                                const t_element = new THREE.Group();
-                                pc.userData.outline.map(o => {
-                                    const lmat = new THREE.LineBasicMaterial({color: jsConfig.colors.mpa_s_designated});
-                                    const geometry = new THREE.BufferGeometry();
-                                    geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(o), 3));
-                                    const p_pline = new THREE.Line(geometry, lmat);
-                                    t_element.add(p_pline);
-                                });
-
-                                // const pro_area = DAT.DATA.SD.protected_areas[h.index];
-                                // const px = pro_area.CENTROID[0] - MDL.center.x;
-                                // const py = pro_area.CENTROID[1] - MDL.center.y;
-                                //
-                                // MDL.outliner.marker.visible = true;
-                                // MDL.outliner.marker.position.set(px,py,0.0);
-                                // const t_color = pro_area.STATUS_ENG === 'Designated' ? jsConfig.colors.mpa_s_designated : jsConfig.colors.mpa_s_proposed;
-                                // MDL.outliner.marker.material.color = new THREE.Color(t_color);
-
-                                t_element.userData.identifier = h.name;
-                                const xt = (t_element.position.x - MDL.center.x);
-                                const yt = (t_element.position.y - MDL.center.y);
-                                t_element.position.set(xt, yt, 0);
-                                MDL.outliner.add(t_element);
-                            }
-                        })
-                    }
-                    if (h.cat === 'places') {
-                        const place = DAT.DATA.SD.places[h.index];
-                        const mu = new THREE.Matrix4();
-                        const p_outlines = new THREE.Group();
-                        const geometry = new THREE.BufferGeometry();
-                        geometry.setAttribute('position', h.obj.geometry.attributes.position);
-                        const lmat = new THREE.LineBasicMaterial({color: jsConfig.colors.places});
-                        const p_pline = new THREE.Line(geometry, lmat);
-                        h.obj.getMatrixAt(h.index, mu);
-                        p_pline.applyMatrix4(mu);
-                        const px = place.lon - MDL.center.x;
-                        const py = place.lat - MDL.center.y;
-                        p_outlines.name = h.name;
-                        p_outlines.userData.identifier = h.name;
-                        p_pline.position.set(px,py,0.0);
-                        p_outlines.add(p_pline);
-                        MDL.outliner.add(p_outlines);
-
-                        // MDL.place_labels.map(pl=>{
-                        //     if(pl.object.index === h.index){
-                        //         pl.marker_c.material.opacity = 0.5;
-                        //     }else{
-                        //         pl.marker_c.material.opacity = 0.0;
-                        //     }
-                        // });//[i].object.
-                    }
-                }
-            });
-
-            MDL.outliner.userData.active.map((h, n)=>{
-                if(!interactive.hash.includes(h)) {
-                    MDL.outliner.userData.active.splice(n,1);
-                    MDL.outliner.children.map(m => {
-                        if(m.userData.identifier === h){
-                            m.removeFromParent();
-                        }
-                    });
-                }
-            });
-
-            view.ui_info.target_lock = false;
-
-            if(interactive.hash_objects.length > 0){
-                const top_element = interactive.hash_objects[0];
-                if(top_element.cat === 'wudi_point') {
-                    const wudi_point = DAT.DATA.SD.wudi_points[top_element.index];
-                    console.log('element_update', top_element.index);
-                    MDL.point_selector.select(wudi_point, CTL.cam);
-                }
-            }
-
-
-        }
-
-        if(interactive.hash_objects.length > 0){
-
-            const top_element = interactive.hash_objects[0];
-            const m_evt = EVT.vars.callback['screen'].meta;
-
-            //if(m_evt.action === 'move') {
-
-            //}
-
-            if(m_evt.action === 'click') {
-                if(top_element.cat === 'wudi_point') {
-                    //interactive.element_update.set_state(top_element.name, true);
-
-                    MDL.point_selector.move_to(CAM);
-
-                    // view.vc.a.copy(MDL.point_selector.object.position);
-                    // view.vc.b.set(view.vc.a.x, 0.0, -view.vc.a.y);
-                    // //init_vars.model.localToWorld(view.vc.a);
-                    // CAM.mover.set_target(CAM.mover.pos, view.vc.b, 2.0);
-                    // CAM.mover.set_rotation_target(MDL.point_selector.offset_angle, true);
-
-                    // const data_index = DAT.DATA.CONF.wudi_index[top_element.index];
-                    // DAT.SELECTOR.point.select(data_index);
-                    // view.ui_control.wudi_point_select.update_selection();
-                }
-                if(top_element.cat === 'places' || top_element.cat === 'protected_areas') {
-                    view.ui_info.target_lock = true;
-                    view.ui_info.lock_position = CTL.v.user.mouse.screen;
-                    const ktx = interactive.element_info_filter_secondary[top_element.cat](top_element.index);
-                    view.ui_info.set_state(true);
-                    view.ui_info.set_text([ktx]);
-                    view.ui_info.set_position(n_pos[0].x, n_pos[0].y, 'mouse');//n_pos[0].y, 'mouse');
-
-                    // view.ui_info.set_position(CTL.v.user.mouse.screen.x, CTL.v.user.mouse.screen.y, 'mouse');
-                }
-            }
-        }else{
-            //MDL.outliner.marker.visible = false;
-            view.ui_info.set_state(false);
-        }
-
-        if(intersects.length === 0) {
-            view.ui_info.set_state(false);
-            //delete(init_vars.trace.watched.interactive);
-            //return false;
-        }
-
     },
     depth_sweep(){
         init_vars.trace.log('depth_sweep');//['fps'] = RUN.fps;
@@ -1940,13 +2035,13 @@ function get_evt_data(source){
         CTL.update(EVT.vars.callback[source].meta, init_vars.model);
         const m_evt = EVT.vars.callback[source].meta;
 
-        if (m_evt.action === 'click') {
-            view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
-            //view.vc.b.copy(init_vars.model.position).negate();
-            const d = 3.0;// CTL.cam.max_zoom - (view.vc.a.length() / 2);
-            //init_vars.trace.log('click', d.toFixed(2), CTL.interact_type);
-            CAM.mover.set_target(CAM.mover.pos, view.vc.a, d);
-        }
+        // if (m_evt.action === 'click') {
+        //     view.vc.a.subVectors(CTL.v.user.mouse.plane_pos, init_vars.model.position);
+        //     //view.vc.b.copy(init_vars.model.position).negate();
+        //     const d = 3.0;// CTL.cam.max_zoom - (view.vc.a.length() / 2);
+        //     //init_vars.trace.log('click', d.toFixed(2), CTL.interact_type);
+        //     CAM.mover.set_target(CAM.mover.pos, view.vc.a, d);
+        // }
 
         if ((m_evt.action === 'drag' || m_evt.action === 'click') && m_evt.delta_x !== null && m_evt.delta_y !== null) {
             //view.ui_info.set_position(CTL.v.user.mouse.screen.x, CTL.v.user.mouse.screen.y, 'mouse');

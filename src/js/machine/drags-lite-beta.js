@@ -100,7 +100,7 @@ export function dragControls(dome_element, dragAction, kva) {
 
 
     function touch_relay(evt, method = null) {
-        //evt.preventDefault();
+        evt.preventDefault();
         //evt.stopPropagation();
 
         const touches = ongoingTouches.map(t => {
@@ -136,9 +136,9 @@ export function dragControls(dome_element, dragAction, kva) {
 
     function touch_move(evt) {
         //
+        evt.preventDefault();
+        evt.stopPropagation();
 
-        //evt.preventDefault();
-        //evt.stopPropagation();
         const touches = evt.changedTouches;
 
         for (let i = 0; i < touches.length; i++) {
@@ -168,7 +168,7 @@ export function dragControls(dome_element, dragAction, kva) {
 
     function touch_down(evt) {
         alarm.setup();
-        //evt.preventDefault();
+        evt.preventDefault();
         //evt.stopPropagation();
 
 
@@ -192,12 +192,12 @@ export function dragControls(dome_element, dragAction, kva) {
             touch_relay(evt, 'secondary-down');
         }
 
-
+        return false;
     }
 
     function touch_up(evt) {
         alarm.cancel();
-        //evt.preventDefault();
+        evt.preventDefault();
         //evt.stopPropagation();
 
 
@@ -215,7 +215,7 @@ export function dragControls(dome_element, dragAction, kva) {
             if (!t_meta.hover_state && (Math.abs(final.pageX - t_meta.origin.x) <= t_meta.buffer) && (Math.abs(final.pageY - t_meta.origin.y) <= t_meta.buffer)) {
                 t_meta.reset();
                 t_meta.set_pos(final.pageX, final.pageY);
-                touch_relay(evt, 'touch-click');
+                touch_relay(evt, 'click');
             } else {
                 t_meta.reset();
                 t_meta.set_pos(final.pageX, final.pageY);

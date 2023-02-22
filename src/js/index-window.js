@@ -222,5 +222,8 @@ const page = {
 
 window.addEventListener('DOMContentLoaded', (event) => {
     console.log('dom loaded. continuing');
+
+    window.scrollTo(0,0);
+
     page.init();
 });

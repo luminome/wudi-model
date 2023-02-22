@@ -656,8 +656,9 @@ a.darklink:visited{
 	text-align: center;
 	top:4px;
 	left:0;
-	color:white;
-	font-size:14px;
+	color:#d3d3d3;
+	font-size: 14px;
+	min-height: 18px;
 	pointer-events: none;
 }
 

@@ -8,6 +8,9 @@ const y_up = new THREE.Vector3(0, 1, 0);
 // const x_right = new THREE.Vector3(1, 0, 0);
 // const z_in = new THREE.Vector3(0, 0, 1);
 
+
+//#// questions about this mover object.
+
 const mover = {
     name: 'synthetic_displacement',
     d: new THREE.Vector3(),
@@ -19,8 +22,8 @@ const mover = {
     pos: new THREE.Vector3(),
     del_pos: new THREE.Vector3(),
     tgt: new THREE.Vector3(),
-    move_vector: null,
-    attenuation: 0.991,///;///99725,//;//75,
+    move_vector: new THREE.Vector3(),
+    attenuation: 0.9,///;///99725,//;//75,
     speed: 0.09,
     vd: 0,
     rv: 0,
@@ -34,7 +37,7 @@ const mover = {
         position: null,
         offset: new THREE.Vector3(),
         target: new THREE.Vector3(),
-        amount: null,
+        amount: 0,
         delta: 0,
         last: 0,
         direction: 1
@@ -75,7 +78,7 @@ const mover = {
         this.vl.set(0,0,0);
     },
     set_target(control_vector, target_pos, zoom=null){
-        console.log('set_target', mover.pos);
+        console.log('set_target', mover.pos, target_pos);//control_vector, target_pos);
 
         //mover.pos.copy(control_vector);
         mover.move_vector = control_vector; //inherit
@@ -83,7 +86,7 @@ const mover = {
 
         vw.subVectors(mover.tgt, mover.pos);
         mover.d_mem = vw.length();
-        mover.speed = 0.015625;//0.0125;/// mover.d_mem/500;
+        mover.speed = 1/360;//0.015625;//0.0125;/// mover.d_mem/500;
 
         if(zoom) {
             mover.z_sta = mover.camera.base_pos.z;
@@ -115,39 +118,41 @@ const mover = {
         const d = (mover.roto.amount*(1-(m/mover.d_mem)));//percentage of distance traveled.
         const r = d - mover.roto.last;
         mover.roto.object.rotateOnWorldAxis(y_up, r*mover.roto.direction);
-
         mover.roto.last = d;
     },
     move(){
         const t_delta = mover.ctr.t*1000;
         vw.subVectors(mover.tgt, mover.pos);
+
         mover.d.copy(vw).multiplyScalar(mover.attenuation);
         mover.prog_perc = vw.length();// / mover.d_mem;
+        mover.route = 1-(mover.prog_perc/mover.d_mem);
 
         const m = mover.d.length();
-
         const delta_p = vw.subVectors(mover.del_pos, mover.pos).length(); ///mover.del_pos.distanceTo(mover.pos);
 
         mover.vd =  delta_p / t_delta;
         const r = 1 - (mover.vd * t_delta) / m;
         mover.ac.copy(mover.d).normalize().multiplyScalar(mover.speed);
 
-        if (r >= 0) mover.vl.add(mover.ac).multiplyScalar(r);
-        //mover.vl.multiplyScalar(0.99);
-        //##what is stop ?1!
-        
-
-        //if (mover.prog_perc < 0.001){ //mover.m < mover.ac.length()){ ///mover.speed/100) {//0.0001){
-        //    mover.is_rotating = false;
-        //    mover.is_moving = false;
-        //    return;
-        // }
-
+        //console.log(r, mover.route);
+        //#//#what is stop ?1!
         mover.del_pos.copy(mover.pos);
-        mover.pos.add(mover.vl);
+
+        if (r >= 0){
+            mover.vl.add(mover.ac).multiplyScalar(r);
+            mover.pos.add(mover.vl);
+            if(mover.z_sta !== null) mover.camera.base_pos.z = mover.z_sta-(mover.z_amt*mover.route);//(1-(m/mover.d_mem)));
+        }else{
+            if(mover.route > 0) {
+                mover.is_rotating = false;
+                mover.is_moving = false;
+                mover.prog_perc = 0.0;
+                mover.pos.copy(mover.tgt);
+            }
+        }
 
 
-        //if(this.z_sta !== null) mover.camera.base_pos.z = this.z_sta-(this.z_amt*(1-(m/this.d_mem)));
     }
 }
 

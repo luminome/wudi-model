@@ -68,7 +68,7 @@ const page = {
             const svg_check_one = document.getElementById("check-box-1").cloneNode(true);
             b.insertBefore(svg_check_one, b.firstChild);
             b.insertBefore(svg_check_zero, b.firstChild);
-            const r_col = jsConfig.colors[b.id];
+            const r_col = jsConfig.colors[b.id+'_text'];
             b.style.fill = r_col;
             b.style.color = r_col;
         });
@@ -94,7 +94,7 @@ const page = {
         };
 
         Object.entries(legend_elements).map(kv => {
-            const el = document.getElementById(kv[0]);
+            const el = document.getElementById('legend-'+kv[0]);
             const legend_mark = document.getElementById(kv[1]);
             const kma = legend_mark.cloneNode(true);
             kma.removeAttribute('id');

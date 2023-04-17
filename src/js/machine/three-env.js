@@ -3,8 +3,9 @@ import * as util from './util.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import * as Stats from "stats.js";
 
-let renderer, scene, composer, view_axes, render_l_date, layer_one, layer_two, layer_three
+let renderer, scene, composer, view_axes, render_l_date, layer_one, layer_two, layer_three, stats
 
 const util_c = new THREE.Color();
 
@@ -149,26 +150,29 @@ function init(){
 
     renderer = new THREE.WebGLRenderer({
         powerPreference: "high-performance",
-        antialias: false,
-        physicallyCorrectLights: true
-        // alpha: true
+        antialias: true,
+        physicallyCorrectLights: true,
+        alpha: false,
+        stencilBuffer: false
     });
 
-    renderer.setPixelRatio(2);
+    renderer.setPixelRatio(1.5);
     renderer.setSize(environment.vars.view.width, environment.vars.view.height);
     // renderer.setClearColor(0x000000);
     // renderer.setClearAlpha(0.0);
     renderer.setClearColor( 0x000000, 0 );
     renderer.autoClear = false;
+    // renderer.gammaFactor = 2.2;
+    // renderer.outputEncoding = THREE.sRGBEncoding;
     // renderer.shadowMap.enabled = true;
     // renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     const parameters = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, stencilBuffer: false };
-    const renderTarget = new THREE.WebGLRenderTarget( environment.vars.view.width, environment.vars.view.height, parameters );
+    const renderTarget = new THREE.WebGLRenderTarget( environment.vars.view.width, environment.vars.view.height);//, parameters );
 
 // cmp = new THREE.EffectComposer(r, renderTarget);
 
-    composer = new EffectComposer( renderer, renderTarget );//, renderTarget );
+    composer = new EffectComposer( renderer );//, renderTarget );//, renderTarget );
 
     // if(environment.vars.view.features.axes_helper){
     //     view_axes = new THREE.AxesHelper(environment.vars.view.scene_width / 2);
@@ -197,18 +201,23 @@ function init(){
     // layer_one.scene.add(light);
     // layer_one.scene.add(ambient_light);
 	layer_one.scene.add( environment.vars.map_model );
+    layer_one.scene.add( environment.vars.model );
     // composer.addPass( layer_one.renderPass );
 
-    layer_two = new LayerSimple( environment.controls.cam.camera );
-    // layer_two.scene.add(light);
-    // layer_two.scene.add(ambient_light);
-	layer_two.scene.add( environment.vars.model );
+    //layer_one.scene.overrideMaterial = new THREE.MeshBasicMaterial({ color: "green" });
+
+    // layer_two = new LayerSimple( environment.controls.cam.camera );
+    // // layer_two.scene.add(light);
+    // // layer_two.scene.add(ambient_light);
+	// layer_two.scene.add( environment.vars.model );
     // composer.addPass( layer_two.renderPass );
 
 	layer_three = new LayerComplex( environment.controls.cam.camera );
     // layer_three.scene.add(light2);
     // layer_three.scene.add(ambient_light);
 	layer_three.scene.add( environment.vars.wudi_model );
+    //layer_three.scene.overrideMaterial = new THREE.MeshBasicMaterial({ color: "red" });
+
     composer.addPass( layer_three.renderPass );
     composer.addPass( layer_three.shaderPass );
 
@@ -225,6 +234,11 @@ function init(){
     // scene.add(environment.arrow);
     //environment.vars.model.updateMatrixWorld();
     //environment.controls.cam.run();
+
+    stats = new Stats;
+    stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+    document.body.appendChild( stats.dom );
+
 }
 
 function post_init() {
@@ -628,20 +642,21 @@ function post_init() {
 }
 
 function render(a) {
-    const k_delta = () => {
-        const d = new Date();
-        const l_delta = d - render_l_date;
-        render_l_date = d;
-        return Math.floor(1000 / l_delta);
-    }
-    environment.fps = k_delta();
+    // const k_delta = () => {
+    //     const d = new Date();
+    //     const l_delta = d - render_l_date;
+    //     render_l_date = d;
+    //     return Math.floor(1000 / l_delta);
+    // }
+    // environment.fps = k_delta();
     environment.vars.animation(a);
 
 
     renderer.clear();
+    // // renderer.render(layer_one.scene, environment.controls.cam.camera);
+    // renderer.clearDepth();
+
     renderer.render(layer_one.scene, environment.controls.cam.camera);
-    renderer.clearDepth();
-    renderer.render(layer_two.scene, environment.controls.cam.camera);
     // renderer.render(layer_three.scene, environment.controls.cam.camera);
     composer.render();
 
@@ -655,8 +670,15 @@ function render(a) {
 }
 
 function animate(f) {
-    environment.frame = window.requestAnimationFrame(animate);
+    stats.begin();
+
+	// monitored code goes here
+
+
+    // environment.frame = window.requestAnimationFrame(animate);
+    environment.frame = requestAnimationFrame(animate);
     render(f);
+    stats.end();
 }
 
 function resize(w,h){

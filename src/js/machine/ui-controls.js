@@ -3,8 +3,8 @@ import * as THREE from 'three/build/three.module.js';
 
 const util_v = new THREE.Vector3();
 const y_up = new THREE.Vector3(0, 1, 0);
-const x_right = new THREE.Vector3(1, 0, 0);
-const z_in = new THREE.Vector3(0, 0, 1);
+// const x_right = new THREE.Vector3(1, 0, 0);
+// const z_in = new THREE.Vector3(0, 0, 1);
 
 const cam = {
     camera: null,
@@ -60,9 +60,9 @@ const cam = {
         cam.direction.copy(cam.util_v);
 
         cam.right.crossVectors(cam.util_v, cam.camera.up).normalize();
-        cam.dot_y = cam.camera.up.dot(y_up);
-        cam.dot_x = cam.right.dot(x_right);
-        cam.dot_z = z_in.dot(cam.util_v);
+        // cam.dot_y = cam.camera.up.dot(y_up);
+        // cam.dot_x = cam.right.dot(x_right);
+        // cam.dot_z = z_in.dot(cam.util_v);
 
         cam.distance = cam.camera.position.length();
 
@@ -157,8 +157,8 @@ export const controls = {
             }
         }
 
-        model.updateMatrix();
-        model.updateMatrixWorld();
+        // model.updateMatrix();
+        // model.updateMatrixWorld();
         // controls.cam.run();
     }
 }

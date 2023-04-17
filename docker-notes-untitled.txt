@@ -1,0 +1,173 @@
+HOVER EVENT SHOULD NOT BE PARADIGMAGTIC. still working on this.
+
+
+
+
+current:
+    master lists:
+
+    protected as points(centroids)
+    places as points.
+
+18:02 09/06/2022 no mind to do this but...
+
+get parsed copy from df, check centroid on sector, save simplified polys of df ON SECTOR.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+tool for wudi_point_proximity is borked. (the most recent tool.)
+seriously all wrong.
+
+
+git rm -r --cached data_resources
+https://discourse.bokeh.org/t/wheelzoom-active-by-default-not-working/2509
+https://discourse.bokeh.org/t/select-callback-using-bokehjs-in-a-static-react-site/9103/5
+
+
+WIKI MAP DATA:
+https://query.wikidata.org/#SELECT%20%3Ftown%20%3FtownLabel%20%3Farea%20%3Fpopulation%20%3Felevation%20WHERE%20%7B%0A%20%20%3Ftown%20%3Flabel%20%22Calvi%22%40fr.%0A%20%20%3Ftown%20wdt%3AP2046%20%3Farea.%0A%20%20%3Ftown%20wdt%3AP1082%20%3Fpopulation.%0A%20%20%3Ftown%20wdt%3AP2044%20%3Felevation.%0A%20%20SERVICE%20wikibase%3Alabel%20%7B%20bd%3AserviceParam%20wikibase%3Alanguage%20%22%5BAUTO_LANGUAGE%5D%2Cfr%22.%20%7D%0A%7D
+
+http://nominatim.openstreetmap.org/search?q=city near [46.81892485,1.8746296563120708]
+
+
+
+https://qwikidata.readthedocs.io/en/stable/readme.html
+
+https://python-overpy.readthedocs.io/en/latest/introduction.html#installation
+https://overpass-turbo.eu/#
+
+Successfully installed overpy-0.6
+
+node(around:25000, 42.610698, 9.526370)[place~"^(city|town|village)$"];
+out geom;
+
+https://gis.stackexchange.com/questions/345727/openstreetmap-osm-relation-id-from-wikidata
+https://gis.stackexchange.com/questions/345727/openstreetmap-osm-relation-id-from-wikidata
+https://blog.devgenius.io/loading-poi-data-from-openstreetmap-using-overpass-api-b287ed809ed8
+
+
+https://query.wikidata.org/
+SELECT ?place ?area ?population ?elevation WHERE {
+  wd:Q686605 wdt:P1448 ?place.
+  wd:Q686605 wdt:P2046 ?area.
+  wd:Q686605 wdt:P1082 ?population.
+  wd:Q686605 wdt:P2044 ?elevation.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],fr". }
+}
+
+//gibraltar
+SELECT DISTINCT ?townLabel ?area ?population ?elevation (group_concat(distinct ?waterLabel;separator=", " ) as ?waterLabels) WHERE {
+  wd:Q1410 wdt:P2046 ?area.
+  wd:Q1410 wdt:P1082 ?population.
+  wd:Q1410 wdt:P2044 ?elevation.
+  
+  OPTIONAL{
+    wd:Q1410 wdt:P206 ?water.
+  }
+  
+  SERVICE wikibase:label {
+    bd:serviceParam wikibase:language "fr". 
+    wd:Q1410 rdfs:label ?townLabel . 
+    ?water rdfs:label ?waterLabel .
+  } 
+
+}group by ?townLabel ?area ?population ?elevation
+
+
+
+
+NODE / PARCEL
+https://github.com/witchard/tutorial-react-parcel-express/blob/master/package.json (-) react
+
+
+
+DOCKER
+
+https://codefresh.io/blog/not-ignore-dockerignore-2/
+
+docker build -t node-obspkg .
+
+dockerhub : luminome : jobmon-jExtaw-1qajvo 
+
+docker logs -f <container-name>
+
+docker run -dp 3000:3000 \
+    -w /docker-test-n -v "$(pwd):/docker-test-n" \
+    node:12-alpine \
+    sh -c "apk add --no-cache python2 g++ make && yarn install && yarn run dev"
+	
+
+
+docker run -dp 3000:3000 \
+    -w /docker-test-n -v "$(pwd):/docker-test-n" \
+    node:12-alpine \
+    sh -c "apk add --no-cache python2 g++ make && npm install && npm run dev"
+	
+	
+	
+
+FROM: https://support.terra.bio/hc/en-us/articles/360035638032-Publish-a-Docker-container-image-to-Google-Container-Registry-GCR-
+	
+docker tag [IMAGE] gcr.io/[PROJECT-ID]/[IMAGE]
+docker tag node-obspkg gcr.io/shaped-aegis-351710/node-obspkg
+
+docker tag node-wudi-model gcr.io/shaped-aegis-351710/node-wudi-model
+
+
+#tag again before push or push does nothing
+
+docker push gcr.io/[PROJECT-ID]/[IMAGE]
+docker push gcr.io/shaped-aegis-351710/node-obspkg
+
+
+
+
+ --no-hmr
+
+JULY:
+
+AGUST:
+close pycharm before any of this. it's very unlikely.
+
+gcloud auth login
+
+To revert your CLI to the previously installed version, you may run:
+  $ gcloud components update --version 387.0.0
+
+docker build -t node-obspkg-lite . 
+docker run -d -p 3000:3000 node-obspkg-lite (exclude:test)
+
+docker push gcr.io/shaped-aegis-351710/node-obspkg-lite
+
+
+jobmon-jExtaw-1qajvo
+
+
+sac@luminome wudi-model % 
+
+docker build -t node-wudi-model .
+
+#tag again before push or push does nothing
+docker tag node-wudi-model gcr.io/shaped-aegis-351710/node-wudi-model
+
+docker push gcr.io/shaped-aegis-351710/node-wudi-model

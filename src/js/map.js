@@ -120,7 +120,7 @@ class Sector {
         this.level = 0;
         this.max_level = 0;
         this.center = new THREE.Vector3();
-        this.group = new THREE.Group();
+        this.group = new THREE.Object3D();
         this.objects = {};
         this.enabled = jsConfig.map_sectors_layers.draw ? jsConfig.map_sectors_layers.allow : [];
         this.meta = null;
@@ -313,9 +313,7 @@ class Sector {
                 // depthWrite: true,
                 // depthTest: false,
             });
-
-
-            const polygons = new THREE.Group();
+            const polygons = new THREE.Object3D();
 
             object.raw.map(obj => {
                 for (let poly of obj) {
@@ -330,6 +328,8 @@ class Sector {
             polygons.userData.enabled = true;
             polygons.userData.type = 'polygons';
             polygons.name = object.name;
+            polygons.matrixAutoUpdate = false;
+
             this.group.add(polygons);
             //polygons.renderOrder = 5;
 
@@ -339,105 +339,15 @@ class Sector {
         if (object.name === 'depth_maps') {
 
             const c_object = object.raw[0];
-            //console.log(c_object)
 
             const bath_o_mat = shaders.by_distance;
             bath_o_mat.uniforms.depth.value = jsConfig.contours.limit_distance;
             bath_o_mat.uniforms.color.value = new THREE.Color(jsConfig.mats.contours.dict.color);
             bath_o_mat.uniforms.baseColor.value = new THREE.Color(jsConfig.colors.window);
 
-            // const bath_o_mat = new THREE.ShaderMaterial({
-            //     uniforms: {
-            //         depth: {
-            //             value: jsConfig.contours.limit_distance
-            //         },
-            //         color: {
-            //             value: new THREE.Color(jsConfig.mats.contours.dict.color)
-            //         },
-            //         baseColor: {
-            //             value: new THREE.Color(jsConfig.colors.window)
-            //         }
-            //     },
-            //     vertexShader: document.getElementById('bathos-vertex-Shader').textContent,
-            //     fragmentShader: document.getElementById('bathos-fragment-Shader').textContent,
-            //     // depthTest: false,
-            //     // depthWrite: true,
-            // });
-
             const vertices = [];
-            const contours = new THREE.Group();
+            const contours = new THREE.Object3D();
             const line_color_default = new THREE.Color(jsConfig.mats.contours.dict.color);
-
-            //console.log(c_object.labels);
-            // c_object.labels.map(label_depth => {
-            //     for(let n=0; n < label_depth.labels.length; n++){
-            //         const label = label_depth.labels[n];
-            //         if(label[0].length === 6){
-            //
-            //         //console.log(label_depth.d, label[0], label[1]);
-            //         //console.log(label_depth.d, label[0], label[1]);
-            //         const ref_label = objects.reference_label(0.05);///object.level);
-            //         const dep = label_depth.d / jsConfig.contours.depth_max;
-            //
-            //
-            //         // const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
-            //         ref_label.position.set(label[0][2], label[0][3], dep);
-            //         map.vc.a.set(label[0][0],label[0][1], dep);
-            //         map.vc.b.set(label[0][4],label[0][5], dep);
-            //
-            //         map.vc.c.subVectors(map.vc.b, map.vc.a);
-            //         map.vc.d.crossVectors(map.vc.up, map.vc.c).normalize();
-            //         map.vc.e.set(0,1,0);
-            //
-            //         map.vc.a.set(-1,0,0);
-            //
-            //
-            //
-            //         const o = Math.sign(map.vc.d.dot(map.vc.a));
-            //
-            //         // map.vc.e.subVectors(ref_label.position, map.vc.a);
-            //         // map.vc.c.set(-1,0,0);
-            //         const a = map.vc.e.angleTo(map.vc.d);
-            //         ref_label.rotateZ(a*o);
-            //
-            //
-            //
-            //         contours.add(ref_label);
-            //
-            //         }
-            //     }
-            //
-            //     // for(let n=0; n < label_depth.labels.length; n++){
-            //     //     const label = label_depth.labels[n];
-            //     //     //console.log(label_depth.d, label[0], label[1]);
-            //     //     //console.log(label_depth.d, label[0], label[1]);
-            //     //     const ref_geom = objects.reference_label(0.01);///object.level);
-            //     //     const ref_mat = new THREE.MeshBasicMaterial({
-            //     //         transparent: true,
-            //     //         opacity:0.7,
-            //     //         color: 0xFF0000,
-            //     //         depthWrite: false,
-            //     //         depthTest: false,
-            //     //     });
-            //     //     const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
-            //     //     ref_marker.position.set(label[0][0], label[0][1], label_depth.d / jsConfig.contours.depth_max);//copy(map.vc.a);
-            //     //     contours.add(ref_marker);
-            //     // }
-            //
-            //
-            // });
-                                // const t = (vertices.length/3);
-                    // const i = Math.floor(Math.random()*t);//t/2);
-                    // if(t > 20) {
-                    //     util.v3_from_buffer(geometry.attributes.position.array, i, map.vc.a);
-                    //
-                    //     const ref_geom = objects.hexagonal_shape(0.01/object.level);
-                    //     const ref_mat = new THREE.MeshBasicMaterial({color: 0xFF0000});
-                    //     const ref_marker = new THREE.Mesh(ref_geom, ref_mat);
-                    //     ref_marker.position.copy(map.vc.a);
-                    //     contour_depth.add(ref_marker);
-                    // }
-
 
 
             c_object.contour_lines.map(line => {
@@ -484,8 +394,6 @@ class Sector {
 
                 if(line.depth !== 0 && line.depth !== -200) {
                     const geometry = new THREE.BufferGeometry();
-
-
                     geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(line_verts), 3));
                     geometry.setAttribute('color', new THREE.BufferAttribute(Float32Array.from(colors), 3));
                     geometry.computeVertexNormals();
@@ -496,6 +404,7 @@ class Sector {
                     contour.userData.depth = line.depth;
                     contour.userData.count = line_verts.length / 3;
                     contour.interactive = true;
+                    contour.matrixAutoUpdate = false;
 
                     contour.userData.setColors = (arr) => {
                         for (let i = 0; i < contour.userData.count; i++) {
@@ -507,7 +416,7 @@ class Sector {
                     }
 
                     contours.add(contour);
-                    contour.renderOrder = 10;
+                    // contour.renderOrder = 10;
 
                     // Line2 ( LineGeometry, LineMaterial )
                     // const f_geometry = new LineGeometry();
@@ -557,12 +466,13 @@ class Sector {
             geometry.setAttribute('position', new THREE.BufferAttribute(Float32Array.from(vertices), 3));
             const k_index = new THREE.BufferAttribute(Uint16Array.from(c_object.indices), 1);
             geometry.setIndex(k_index);
-            //geometry.computeVertexNormals();
+            // geometry.computeVertexNormals();
             geometry.scale(1,1,1);///jsConfig.contours.depth_max);
 
             const mesh = new THREE.Mesh(geometry, meshes_material);
             mesh.userData.is_depth_map = true;
             mesh.interactive = true;
+            mesh.matrixAutoUpdate = false;
             //mesh.position.set(0.0,0.0,-0.01);
         //     object.raw.map(obj => {
         //         //console.log(obj, obj.indices.length, obj.vertices.length/3);
@@ -592,12 +502,13 @@ class Sector {
 
             contours.userData.level = object.level;
             contours.userData.enabled = true;
-            contours.userData.type = 'contours';
+            contours.userData.type = 'depth_maps'; //'contours';
 
             contours.add(mesh);
+            contours.matrixAutoUpdate = false;
 
             this.group.add(contours);
-            mesh.renderOrder = 9;
+            // mesh.renderOrder = 9;
 
 
 
@@ -720,7 +631,7 @@ class Sector {
     check_layers() {
         if (this.meta) {
             const required = Object.entries(this.meta)
-                .filter(k => k[1].hasOwnProperty(this.level) && k[1][this.level] === null && this.enabled.includes(k[0]));
+                .filter(k => k[1].hasOwnProperty(this.level) && k[1][this.level] === null && this.enabled.includes(k[0]) && !this.disabled.includes(k[0]));
 
             if (required.length) {
                 const list = required.map(k => ({
@@ -757,6 +668,8 @@ class Sector {
         this.group.name = `Sector-${this.id}-group`;
         this.group.sector = true;
 
+        this.group.matrixAutoUpdate = false;
+
         this.objects.plane = plane_line;
 
         const meta_json = {name:'sector', list:[{url: `${this.path}/meta.json`, type: 'json', name: 'meta'}]};
@@ -778,6 +691,7 @@ class Sector {
 
             const c_level = this.max_level >= LV;
             this.level = LV;
+
             if (jsConfig.MAP_DEBUG) {
                 this.objects.plane.material.setValues({opacity: (this.level / jsConfig.levels) * 0.125});
                 this.objects.plane.userData.level = this.level;
@@ -893,7 +807,8 @@ const map = {
             let loc = [sx, sy];
             const new_tile = new Sector(i, loc, tile_vertices);
             map.object.add(new_tile.group);
-            new_tile.group.renderOrder = 20;
+            new_tile.group.matrixAutoUpdate = false;
+            // new_tile.group.renderOrder = 20;
         }
 
         map.object.add(map.ray.object);

@@ -78,7 +78,7 @@ const mover = {
         this.vl.set(0,0,0);
     },
     set_target(control_vector, target_pos, zoom=null){
-        console.log('set_target', mover.pos, target_pos);//control_vector, target_pos);
+        //console.log('set_target', mover.pos, target_pos);//control_vector, target_pos);
 
         //mover.pos.copy(control_vector);
         mover.move_vector = control_vector; //inherit
@@ -88,7 +88,7 @@ const mover = {
         mover.d_mem = vw.length();
         mover.speed = 1/360;//0.015625;//0.0125;/// mover.d_mem/500;
 
-        if(zoom) {
+        if(zoom !== null) {
             mover.z_sta = mover.camera.base_pos.z;
             mover.z_amt = mover.z_sta-zoom;
         }else{

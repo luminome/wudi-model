@@ -174,7 +174,7 @@ function point_selector(){
         P.set();
 
         P.top_arr.object.visible = false;
-        P.marker.visible = true;
+        P.marker.visible = false;
         P.ray.visible = false;
         P.offest_ray.visible = false;
         P.label.object.visible = false;
@@ -393,7 +393,7 @@ const layers = {
             instance.userData.type = 'scaled_point';
             instance.userData.td = datum;
             if(datum.interactive) instance.interactive = true;
-
+            instance.matrixAutoUpdate = false;
             return instance;
         },
         wudi_points_instance(DATA){
@@ -528,6 +528,7 @@ const layers = {
                 instance.userData.type = 'bar';
                 instance.visible = bar.visible;
                 instance.interactive = true;
+                instance.matrixAutoUpdate = false;
                 layers.wudi_points.add(instance);
             }
 
@@ -545,7 +546,7 @@ const layers = {
             hybrid_instance.userData.type = 'hybrid';
             hybrid_instance.visible = hybrid.visible;
             // hybrid_instance.position.setZ(0.01);
-
+            hybrid_instance.matrixAutoUpdate = false;
             //hybrid_instance.interactive = false;
             layers.wudi_points.add(hybrid_instance);
 
@@ -568,7 +569,7 @@ const layers = {
 
             model.init_vars.wudi_model.add(layers.wudi_points);
             // layers.iso_bath.renderOrder = 2;
-            layers.wudi_points.renderOrder = 10;
+            // layers.wudi_points.renderOrder = 10;
 
             // model.init_vars.wudi_model.updateMatrix();
             //return CONF;
@@ -617,6 +618,7 @@ const layers = {
 
             layers.places.updateMatrix();
             layers.places.updateMatrixWorld(true); //force this for first run.
+            layers.places.matrixAutoUpdate = false;
 
             model.container.add(layers.places);
 
@@ -664,13 +666,14 @@ const layers = {
 
             layers.protected_areas.updateMatrix();
             layers.protected_areas.updateMatrixWorld(true); //force this for first run.
+            layers.protected_areas.matrixAutoUpdate = false;
 
             model.container.add(layers.protected_areas);
             model.container.updateMatrix();
 
         },
         iso_bath(DATA){
-            layers.iso_bath = new THREE.Group();
+            layers.iso_bath = new THREE.Object3D();
             const raw_data = DATA.RAW.iso_bath.raw;
             const data = raw_data.slice(1, raw_data.length);
 
@@ -736,9 +739,10 @@ const layers = {
             layers.iso_bath.position.set(-model.center.x, 0.0, model.center.y);
             layers.iso_bath.updateMatrix();
             layers.iso_bath.updateMatrixWorld(true); //force this for first run.
+            layers.iso_bath.matrixAutoUpdate = false;
 
             model.init_vars.map_model.add(layers.iso_bath);
-            layers.iso_bath.renderOrder = 2;
+            // layers.iso_bath.renderOrder = 2;
             //model.container.updateMatrix();
 
 
@@ -853,6 +857,7 @@ const layers = {
                     layers.data.wudi_point.color_adaptive[i_mesh.name][v[0]] = color_value;
 
                     layers.u.color.fromArray(layers.data.wudi_point.color_processed(v[0], i_mesh.userData.td.base_color, color_value));
+                    //layers.u.color.convertSRGBToLinear();
 
                     hybrid_color.push(layers.u.color.clone());
 
@@ -1113,7 +1118,9 @@ const model = {
         model.position_marker.visible = false;
 
         model.container.add(model.user_position_marker);
-        model.user_position_marker.visible = true;
+        model.user_position_marker.visible = false;
+
+        model.container.matrixAutoUpdate = false;
 
         model.container.updateMatrix();
         model.container.updateMatrixWorld(true);

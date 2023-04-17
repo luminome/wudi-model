@@ -6,7 +6,7 @@ const jsConfig = {
         hybrid_welling:'#FFFFFF',
         up_welling_text:'#6666FF',
         down_welling_text:'#FF6666',
-        mpa_s_designated:'#00EE00',
+        mpa_s_designated:'#009900',
         mpa_s_proposed:'#00AAFF',
         places:'#FFFF00',
         iso_bath:'#CCCCCC',
@@ -14,7 +14,7 @@ const jsConfig = {
         window: '#1D2733',
         window_overlay: '#1D2733CC',
         view_elements: '#CCCCCC',
-        view_elements_text: '#AAAAAA',
+        view_elements_text: '#888888',
         contours: {
             select: [0x4444CC, 0x4444CC]
         },
@@ -85,6 +85,7 @@ const jsConfig = {
                 side: 'FrontSide',
                 // depthTest: false,
                 // depthWrite: true,
+                // wireFrame: true,
                 // flatShading: true,
                 // metalness: 0.0,
                 // roughness: 0.85,
@@ -118,7 +119,7 @@ const jsConfig = {
     assets:{
         test:{
             name: 'debug_test_data',
-            list: [{url: '/static/data/data_test.json', type: 'json', name:'test', size:0}]
+            list: [{url: path_prefix+'data_test.json', type: 'json', name:'test', size:0}]
         },
         database:{
             name: 'database_queries',
@@ -161,9 +162,9 @@ const jsConfig = {
     static_path: path_prefix, //"/data",
     map_sectors_layers: {
         draw: true,
-        allow: ['polygons', 'depth_maps', 'protected_areas'], /// 'line_strings', 'depth_maps'], //'meshes'], //, ''contours', mpa_s'], //, 'meshes'] 'polygons', 'line_strings',
+        allow: ['polygons', 'depth_maps', 'protected_areas'], ///  'line_strings', 'depth_maps'], //'meshes'], //, ''contours', mpa_s'], //, 'meshes'] 'polygons', 'line_strings',
     },
-    GENERAL_DEBUG: false,
+    GENERAL_DEBUG: true,
     MAP_DEBUG: false,
     DEBUG_TRACE_INITIAL_STATE: false,
     map_axes_active: true,
@@ -207,11 +208,14 @@ const jsConfig = {
         wudi_points: true,
         places: true,
         protected_areas: false,
-        iso_bath: true
+        iso_bath: false
     },
     data_source_masked_indices: true,
     camera_auto_rotate_default: true,
     protected_areas_default: true,
+    places_default: true,
+    contours_default: true,
 }
+
 
 export default jsConfig
